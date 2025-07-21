@@ -1,0 +1,18 @@
+[
+  {
+    "_id": "1752303191143",
+    "name": "Mukesh Pabbathi",
+    "email": "mukeshpabbathi@gmail.com",
+    "password": "$2b$10$Znca5pWsKapZMtXPCfwpbexAepiNcbSlD/vEqH4yT/gD5Fen97IP6",
+    "role": "admin",
+    "createdAt": "2025-07-12T06:53:11.143Z"
+  },
+  {
+    "_id": "1752305152255",
+    "name": "test",
+    "email": "test@gmail.com",
+    "password": "$2b$10$t86/tXf0uDMVRyPBiiiK2O0IyHv78XfJaWHa8SCRk54GDMOou7.My",
+    "role": "customer",
+    "createdAt": "2025-07-12T07:25:52.255Z"
+  }
+]

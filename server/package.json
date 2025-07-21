@@ -1,0 +1,33 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "SriVasaviJewels Server",
+  "main": "index.js",
+  "scripts": {
+    "test": "test_server",
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "create-admin": "node scripts/createAdmin.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Mukeshpabbathi/SriVasaviJewels.git"
+  },
+  "author": "Mukesh Pabbathi",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Mukeshpabbathi/SriVasaviJewels/issues"
+  },
+  "homepage": "https://github.com/Mukeshpabbathi/SriVasaviJewels#readme",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.0.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

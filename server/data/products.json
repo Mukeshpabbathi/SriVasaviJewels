@@ -1,0 +1,24 @@
+[
+  {
+    "id": "2000000000001",
+    "name": "Gold Necklace",
+    "description": "Beautiful 22K gold necklace with intricate design",
+    "price": 45000,
+    "category": "necklace",
+    "imageUrl": "https://example.com/images/gold-necklace.jpg",
+    "inStock": true,
+    "weight": "25g",
+    "createdAt": "2025-07-21T02:22:59.515Z"
+  },
+  {
+    "id": "2000000000002",
+    "name": "Diamond Earrings",
+    "description": "Elegant diamond earrings with gold setting",
+    "price": 35000,
+    "category": "earrings",
+    "imageUrl": "https://example.com/images/diamond-earrings.jpg",
+    "inStock": true,
+    "weight": "8g",
+    "createdAt": "2025-07-21T02:22:59.515Z"
+  }
+]
