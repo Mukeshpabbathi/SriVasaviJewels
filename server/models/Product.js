@@ -20,8 +20,7 @@ const productSchema = new mongoose.Schema({
   },
   subcategory: {
     type: String,
-    trim: true,
-    default: ''
+    trim: true
   },
   metal: {
     type: String,
@@ -30,16 +29,11 @@ const productSchema = new mongoose.Schema({
   },
   purity: {
     type: String,
-    trim: true,
-    default: '',
-    validate: {
-      validator: function(v) {
-        // Allow empty string or valid enum values
-        if (!v || v === '') return true;
-        return ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'].includes(v);
-      },
-      message: 'Invalid purity value. Valid options: 14K, 18K, 22K, 24K, 925 Silver, Platinum 950, Not Applicable'
-    }
+    enum: {
+      values: ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'],
+      message: 'Invalid purity value. Please select from available options.'
+    },
+    required: [true, 'Purity is required']
   },
   weight: {
     value: {
@@ -85,7 +79,7 @@ const productSchema = new mongoose.Schema({
   stock: {
     quantity: {
       type: Number,
-      required: true,
+      required: [true, 'Stock quantity is required'],
       min: [0, 'Stock quantity cannot be negative'],
       default: 0
     },
@@ -138,14 +132,12 @@ const productSchema = new mongoose.Schema({
   seoTitle: {
     type: String,
     trim: true,
-    maxlength: [60, 'SEO title cannot exceed 60 characters'],
-    default: ''
+    maxlength: [60, 'SEO title cannot exceed 60 characters']
   },
   seoDescription: {
     type: String,
     trim: true,
-    maxlength: [160, 'SEO description cannot exceed 160 characters'],
-    default: ''
+    maxlength: [160, 'SEO description cannot exceed 160 characters']
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,

@@ -1,6 +1,6 @@
 const { body } = require('express-validator');
 
-// Simplified validation rules for creating a product
+// Validation rules for creating a product
 const validateCreateProduct = [
   body('name')
     .trim()
@@ -21,6 +21,13 @@ const validateCreateProduct = [
     .trim()
     .isLength({ min: 1 })
     .withMessage('Metal type is required'),
+    
+  body('purity')
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Purity is required')
+    .isIn(['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'])
+    .withMessage('Invalid purity value. Please select from available options.'),
     
   body('price')
     .isFloat({ min: 0 })
@@ -77,6 +84,12 @@ const validateCreateProduct = [
       }
       return true;
     }),
+    
+  // Direct stock quantity validation (for form field)
+  body('stock.quantity')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Stock quantity must be a non-negative integer'),
     
   body('features')
     .optional()
@@ -157,7 +170,7 @@ const validateCreateProduct = [
     .withMessage('SEO description must not exceed 160 characters')
 ];
 
-// Validation rules for updating a product (similar to create but all fields optional)
+// Validation rules for updating a product (similar to create but all fields optional except those that should remain required)
 const validateUpdateProduct = [
   body('name')
     .optional()
@@ -182,6 +195,12 @@ const validateUpdateProduct = [
     .trim()
     .isLength({ min: 1 })
     .withMessage('Metal type cannot be empty'),
+    
+  body('purity')
+    .optional()
+    .trim()
+    .isIn(['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'])
+    .withMessage('Invalid purity value. Please select from available options.'),
     
   body('price')
     .optional()
@@ -237,6 +256,11 @@ const validateUpdateProduct = [
       }
       return true;
     }),
+    
+  body('stock.quantity')
+    .optional()
+    .isInt({ min: 0 })
+    .withMessage('Stock quantity must be a non-negative integer'),
     
   body('dimensions')
     .optional()

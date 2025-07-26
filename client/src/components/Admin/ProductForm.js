@@ -252,7 +252,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Product Name *
+                Product Name <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
@@ -267,7 +267,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category *
+                Category <span className="text-red-500">*</span>
               </label>
               <select
                 name="category"
@@ -299,7 +299,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Metal Type *
+                Metal Type <span className="text-red-500">*</span>
               </label>
               <select
                 name="metal"
@@ -317,12 +317,13 @@ const ProductForm = ({ product, onSave, onCancel }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Purity
+                Purity <span className="text-red-500">*</span>
               </label>
               <select
                 name="purity"
                 value={formData.purity}
                 onChange={handleInputChange}
+                required
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value="">Select Purity</option>
@@ -334,7 +335,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stock Quantity *
+                Stock Quantity <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -352,7 +353,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Description *
+              Description <span className="text-red-500">*</span>
             </label>
             <textarea
               name="description"
@@ -403,7 +404,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Price (₹) *
+                Price (₹) <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
