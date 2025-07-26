@@ -1,9 +1,10 @@
 const express = require('express');
 const {
   getAllUsers,
-  getDashboardStats,
-  updateUserRole,
+  getUserById,
+  updateUser,
   deleteUser,
+  getDashboardStats
 } = require('../controllers/adminController');
 const { protect, admin } = require('../middleware/authMiddleware');
 
@@ -13,9 +14,13 @@ const router = express.Router();
 router.use(protect);
 router.use(admin);
 
-router.get('/users', getAllUsers);
+// Dashboard stats
 router.get('/stats', getDashboardStats);
-router.put('/users/:id/role', updateUserRole);
+
+// User management routes
+router.get('/users', getAllUsers);
+router.get('/users/:id', getUserById);
+router.put('/users/:id', updateUser);
 router.delete('/users/:id', deleteUser);
 
 module.exports = router;

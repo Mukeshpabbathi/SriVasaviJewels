@@ -1,127 +1,133 @@
 const User = require('../models/User');
-const memoryDB = require('../config/memoryDB');
-
-// Global variable to track if we're using MongoDB or in-memory DB
-let usingMongoDB = true;
-
-// Check if MongoDB is available
-const checkMongoDBAvailability = async () => {
-  try {
-    await User.findOne();
-    usingMongoDB = true;
-    return true;
-  } catch (err) {
-    usingMongoDB = false;
-    console.log('⚠️ MongoDB not available, using in-memory database in admin controller');
-    return false;
-  }
-};
+const Product = require('../models/Product');
+const Order = require('../models/Order');
 
 // @desc    Get all users (Admin only)
 // @route   GET /api/admin/users
 // @access  Private/Admin
 const getAllUsers = async (req, res) => {
   try {
-    await checkMongoDBAvailability();
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
     
-    let users;
+    const search = req.query.search || '';
+    const role = req.query.role || '';
     
-    if (usingMongoDB) {
-      users = await User.find({}).select('-password').sort({ createdAt: -1 });
-    } else {
-      users = memoryDB.getAllUsers().map(user => {
-        const { password, ...userWithoutPassword } = user;
-        return userWithoutPassword;
+    // Build query
+    let query = {};
+    
+    if (search) {
+      query.$or = [
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    if (role) {
+      query.role = role;
+    }
+    
+    const users = await User.find(query)
+      .select('-password')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+    
+    const total = await User.countDocuments(query);
+    
+    res.json({
+      success: true,
+      data: {
+        users,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit)
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get all users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error getting users'
+    });
+  }
+};
+
+// @desc    Get user by ID (Admin only)
+// @route   GET /api/admin/users/:id
+// @access  Private/Admin
+const getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
       });
     }
     
-    res.json(users);
+    res.json({
+      success: true,
+      data: user
+    });
   } catch (error) {
-    console.error('Get users error:', error);
-    res.status(500).json({ message: 'Server error getting users' });
+    console.error('Get user by ID error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error getting user'
+    });
   }
 };
 
-// @desc    Get dashboard stats (Admin only)
-// @route   GET /api/admin/stats
+// @desc    Update user (Admin only)
+// @route   PUT /api/admin/users/:id
 // @access  Private/Admin
-const getDashboardStats = async (req, res) => {
+const updateUser = async (req, res) => {
   try {
-    await checkMongoDBAvailability();
+    const { name, email, role, isActive, phone } = req.body;
     
-    let totalUsers, totalCustomers, totalAdmins;
+    const user = await User.findById(req.params.id);
     
-    if (usingMongoDB) {
-      totalUsers = await User.countDocuments();
-      totalCustomers = await User.countDocuments({ role: 'customer' });
-      totalAdmins = await User.countDocuments({ role: 'admin' });
-    } else {
-      const users = memoryDB.getAllUsers();
-      totalUsers = users.length;
-      totalCustomers = users.filter(user => user.role === 'customer').length;
-      totalAdmins = users.filter(user => user.role === 'admin').length;
-    }
-
-    // Mock data for now - will be replaced with real data later
-    const stats = {
-      totalUsers,
-      totalCustomers,
-      totalAdmins,
-      totalProducts: 12, // Mock
-      totalOrders: 45,   // Mock
-      revenue: 125000    // Mock
-    };
-
-    res.json(stats);
-  } catch (error) {
-    console.error('Get stats error:', error);
-    res.status(500).json({ message: 'Server error getting stats' });
-  }
-};
-
-// @desc    Update user role (Admin only)
-// @route   PUT /api/admin/users/:id/role
-// @access  Private/Admin
-const updateUserRole = async (req, res) => {
-  try {
-    await checkMongoDBAvailability();
-    
-    const { role } = req.body;
-    const userId = req.params.id;
-
-    if (!['customer', 'admin'].includes(role)) {
-      return res.status(400).json({ message: 'Invalid role' });
-    }
-
-    let user;
-    
-    if (usingMongoDB) {
-      user = await User.findByIdAndUpdate(
-        userId,
-        { role },
-        { new: true }
-      ).select('-password');
-    } else {
-      // For in-memory DB, we need to implement this functionality
-      const userIndex = memoryDB.users.findIndex(u => u.id === userId);
-      if (userIndex !== -1) {
-        memoryDB.users[userIndex].role = role;
-        memoryDB.saveData();
-        
-        // Create a copy without password
-        user = { ...memoryDB.users[userIndex] };
-        delete user.password;
-      }
-    }
-
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
-
-    res.json(user);
+    
+    // Update fields
+    if (name) user.name = name;
+    if (email) user.email = email;
+    if (role) user.role = role;
+    if (typeof isActive === 'boolean') user.isActive = isActive;
+    if (phone) user.phone = phone;
+    
+    await user.save();
+    
+    res.json({
+      success: true,
+      message: 'User updated successfully',
+      data: user
+    });
   } catch (error) {
-    console.error('Update role error:', error);
-    res.status(500).json({ message: 'Server error updating user role' });
+    console.error('Update user error:', error);
+    
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already exists'
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: 'Server error updating user'
+    });
   }
 };
 
@@ -130,43 +136,106 @@ const updateUserRole = async (req, res) => {
 // @access  Private/Admin
 const deleteUser = async (req, res) => {
   try {
-    await checkMongoDBAvailability();
+    const user = await User.findById(req.params.id);
     
-    const userId = req.params.id;
-
-    // Prevent admin from deleting themselves
-    if (userId === req.user.id) {
-      return res.status(400).json({ message: 'Cannot delete your own account' });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
     }
-
-    let user;
     
-    if (usingMongoDB) {
-      user = await User.findByIdAndDelete(userId);
-    } else {
-      // For in-memory DB, we need to implement this functionality
-      const userIndex = memoryDB.users.findIndex(u => u.id === userId);
-      if (userIndex !== -1) {
-        user = memoryDB.users[userIndex];
-        memoryDB.users.splice(userIndex, 1);
-        memoryDB.saveData();
+    // Don't allow deleting the last admin
+    if (user.role === 'admin') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount <= 1) {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot delete the last admin user'
+        });
       }
     }
-
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    res.json({ message: 'User deleted successfully' });
+    
+    await User.findByIdAndDelete(req.params.id);
+    
+    res.json({
+      success: true,
+      message: 'User deleted successfully'
+    });
   } catch (error) {
     console.error('Delete user error:', error);
-    res.status(500).json({ message: 'Server error deleting user' });
+    res.status(500).json({
+      success: false,
+      message: 'Server error deleting user'
+    });
+  }
+};
+
+// @desc    Get dashboard stats (Admin only)
+// @route   GET /api/admin/stats
+// @access  Private/Admin
+const getDashboardStats = async (req, res) => {
+  try {
+    const [
+      totalUsers,
+      totalCustomers,
+      totalAdmins,
+      totalProducts,
+      activeProducts,
+      totalOrders,
+      pendingOrders
+    ] = await Promise.all([
+      User.countDocuments(),
+      User.countDocuments({ role: 'customer' }),
+      User.countDocuments({ role: 'admin' }),
+      Product.countDocuments(),
+      Product.countDocuments({ isActive: true }),
+      Order.countDocuments(),
+      Order.countDocuments({ orderStatus: 'Pending' })
+    ]);
+    
+    // Get recent users (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    const recentUsers = await User.countDocuments({
+      createdAt: { $gte: sevenDaysAgo }
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        users: {
+          total: totalUsers,
+          customers: totalCustomers,
+          admins: totalAdmins,
+          recent: recentUsers
+        },
+        products: {
+          total: totalProducts,
+          active: activeProducts,
+          inactive: totalProducts - activeProducts
+        },
+        orders: {
+          total: totalOrders,
+          pending: pendingOrders,
+          completed: totalOrders - pendingOrders
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get dashboard stats error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error getting dashboard stats'
+    });
   }
 };
 
 module.exports = {
   getAllUsers,
-  getDashboardStats,
-  updateUserRole,
+  getUserById,
+  updateUser,
   deleteUser,
+  getDashboardStats
 };

@@ -1,10 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const memoryDB = require('../config/memoryDB');
-
-// Global variable to track if we're using MongoDB or in-memory DB
-let usingMongoDB = true;
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -13,99 +9,96 @@ const generateToken = (id) => {
   });
 };
 
-// Check if MongoDB is available
-const checkMongoDBAvailability = async () => {
-  try {
-    await User.findOne();
-    usingMongoDB = true;
-    return true;
-  } catch (err) {
-    usingMongoDB = false;
-    console.log('⚠️ MongoDB not available, using in-memory database');
-    return false;
-  }
-};
-
 // @desc    Register new user
 // @route   POST /api/auth/signup
 // @access  Public
 const signup = async (req, res) => {
   try {
-    await checkMongoDBAvailability();
-    
-    const { name, email, password } = req.body;
-    console.log('Signup attempt:', { name, email });
+    const { name, email, password, phone } = req.body;
+    console.log('Signup attempt:', { name, email, phone });
 
     // Validation
     if (!name || !email || !password) {
-      return res.status(400).json({ message: 'Please provide all required fields' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Please provide all required fields (name, email, password)' 
+      });
     }
 
     if (password.length < 6) {
-      return res.status(400).json({ message: 'Password must be at least 6 characters' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Password must be at least 6 characters' 
+      });
     }
 
     // Check if user exists
-    let userExists;
-    
-    if (usingMongoDB) {
-      userExists = await User.findOne({ email });
-    } else {
-      userExists = memoryDB.findUserByEmail(email);
-    }
+    const userExists = await User.findOne({ email: email.toLowerCase() });
     
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'User with this email already exists' 
+      });
     }
 
-    // Hash password
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+    // Check if this is the first user (make them admin)
+    const userCount = await User.countDocuments();
+    const role = userCount === 0 ? 'admin' : 'customer';
 
-    let user;
-    let role = 'customer';
+    // Create user (password will be hashed by the model middleware)
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+      phone: phone?.trim(),
+      role,
+      emailVerified: role === 'admin' // Auto-verify admin
+    });
+
+    // Generate token
+    const token = generateToken(user._id);
     
-    if (usingMongoDB) {
-      // Check if this is the first user (make them admin)
-      const userCount = await User.countDocuments();
-      role = userCount === 0 ? 'admin' : 'customer';
-
-      // Create user
-      user = await User.create({
-        name,
-        email,
-        password: hashedPassword,
-        role,
-      });
-    } else {
-      // For in-memory DB, check if this is the first user
-      role = memoryDB.getAllUsers().length === 0 ? 'admin' : 'customer';
-      
-      // Create user in memory DB
-      user = memoryDB.createUser({
-        name,
-        email,
-        password: hashedPassword,
-        role,
-      });
-    }
-
-    if (user) {
-      const token = generateToken(user._id || user.id);
-      
-      res.status(201).json({
-        _id: user._id || user.id,
+    console.log(`✅ User created successfully: ${user.email} (${user.role})`);
+    
+    res.status(201).json({
+      success: true,
+      message: 'User registered successfully',
+      data: {
+        _id: user._id,
         name: user.name,
         email: user.email,
         role: user.role,
+        phone: user.phone,
         token
-      });
-    } else {
-      res.status(400).json({ message: 'Invalid user data' });
-    }
+      }
+    });
+
   } catch (error) {
     console.error('Signup error:', error);
-    res.status(500).json({ message: 'Server error during signup' });
+    
+    // Handle mongoose validation errors
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages
+      });
+    }
+
+    // Handle duplicate key error
+    if (error.code === 11000) {
+      return res.status(400).json({
+        success: false,
+        message: 'User with this email already exists'
+      });
+    }
+
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during registration' 
+    });
   }
 };
 
@@ -114,72 +107,80 @@ const signup = async (req, res) => {
 // @access  Public
 const login = async (req, res) => {
   try {
-    await checkMongoDBAvailability();
-    
     const { email, password } = req.body;
-    console.log('Login attempt:', { email, password });
+    console.log('Login attempt:', { email });
 
     // Validation
     if (!email || !password) {
-      console.log('Missing email or password');
-      return res.status(400).json({ message: 'Please provide email and password' });
+      return res.status(400).json({ 
+        success: false,
+        message: 'Please provide email and password' 
+      });
     }
 
-    // Check for user email
-    let user;
-    
-    if (usingMongoDB) {
-      console.log('Using MongoDB to find user');
-      user = await User.findOne({ email });
-    } else {
-      console.log('Using in-memory DB to find user');
-      user = memoryDB.findUserByEmail(email);
-      console.log('In-memory user found:', user ? 'Yes' : 'No');
-      if (user) {
-        console.log('User details:', { 
-          id: user.id, 
-          email: user.email, 
-          name: user.name, 
-          role: user.role,
-          passwordHash: user.password.substring(0, 10) + '...'
-        });
-      }
-    }
+    // Check for user email (include password in query)
+    const user = await User.findOne({ email: email.toLowerCase() })
+      .select('+password')
+      .exec();
 
     if (!user) {
-      console.log('User not found');
-      return res.status(401).json({ message: 'Invalid email or password' });
+      console.log('User not found:', email);
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid email or password' 
+      });
     }
 
-    // Check password
-    console.log('Comparing password...');
-    console.log('Input password:', password);
-    console.log('Stored hash:', user.password);
-    
-    const isMatch = await bcrypt.compare(password, user.password);
-    console.log('Password match result:', isMatch);
+    // Check if user is active
+    if (!user.isActive) {
+      return res.status(401).json({ 
+        success: false,
+        message: 'Account is deactivated. Please contact support.' 
+      });
+    }
+
+    // Check password using the model method
+    const isMatch = await user.matchPassword(password);
     
     if (!isMatch) {
-      console.log('Password does not match');
-      return res.status(401).json({ message: 'Invalid email or password' });
+      console.log('Password does not match for user:', email);
+      return res.status(401).json({ 
+        success: false,
+        message: 'Invalid email or password' 
+      });
     }
     
-    console.log('Login successful');
+    // Update last login
+    user.lastLogin = new Date();
+    await user.save();
+    
+    console.log(`✅ Login successful: ${user.email} (${user.role})`);
     
     // Generate token
-    const token = generateToken(user._id || user.id);
+    const token = generateToken(user._id);
     
-    // Return user data and token
+    // Return user data and token (password excluded by model transform)
     res.json({
-      _id: user._id || user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      token
+      success: true,
+      message: 'Login successful',
+      data: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        phone: user.phone,
+        avatar: user.avatar,
+        lastLogin: user.lastLogin,
+        token
+      }
     });
+
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Server error during login' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error during login' 
+    });
   }
 };
 
@@ -188,29 +189,76 @@ const login = async (req, res) => {
 // @access  Private
 const getProfile = async (req, res) => {
   try {
-    await checkMongoDBAvailability();
-    
-    let user;
-    
-    if (usingMongoDB) {
-      user = await User.findById(req.user.id).select('-password');
-    } else {
-      const foundUser = memoryDB.findUserById(req.user.id);
-      if (foundUser) {
-        // Create a copy without the password
-        user = { ...foundUser };
-        delete user.password;
-      }
-    }
+    const user = await User.findById(req.user.id)
+      .populate('addresses')
+      .exec();
     
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
     }
     
-    res.json(user);
+    res.json({
+      success: true,
+      data: user
+    });
+
   } catch (error) {
     console.error('Profile error:', error);
-    res.status(500).json({ message: 'Server error getting profile' });
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error getting profile' 
+    });
+  }
+};
+
+// @desc    Update user profile
+// @route   PUT /api/auth/profile
+// @access  Private
+const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, avatar } = req.body;
+    
+    const user = await User.findById(req.user.id);
+    
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+
+    // Update fields
+    if (name) user.name = name.trim();
+    if (phone) user.phone = phone.trim();
+    if (avatar) user.avatar = avatar;
+
+    await user.save();
+    
+    res.json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: user
+    });
+
+  } catch (error) {
+    console.error('Update profile error:', error);
+    
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors: messages
+      });
+    }
+
+    res.status(500).json({ 
+      success: false,
+      message: 'Server error updating profile' 
+    });
   }
 };
 
@@ -218,4 +266,5 @@ module.exports = {
   signup,
   login,
   getProfile,
+  updateProfile
 };
