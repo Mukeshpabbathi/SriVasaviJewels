@@ -1,16 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const ProductFilters = ({ filters, onFilterChange, stats }) => {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [localFilters, setLocalFilters] = useState(filters);
+  const [configurations, setConfigurations] = useState({
+    categories: [],
+    metals: [],
+    stock_statuses: []
+  });
 
-  const categories = [
-    'Necklaces', 'Rings', 'Earrings', 'Bracelets', 'Bangles',
-    'Chains', 'Pendants', 'Wedding Sets', 'Traditional', 'Modern', 'Other'
-  ];
+  // Fetch configurations from database
+  useEffect(() => {
+    const fetchConfigurations = async () => {
+      try {
+        const response = await axios.get('http://localhost:4000/api/config/public');
+        if (response.data.success) {
+          setConfigurations(response.data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching configurations:', error);
+        // Fallback to default values
+        setConfigurations({
+          categories: ['Necklaces', 'Rings', 'Earrings', 'Bracelets', 'Bangles', 'Chains', 'Pendants', 'Wedding Sets', 'Traditional', 'Modern', 'Other'],
+          metals: ['Gold', 'Silver', 'Platinum', 'Diamond', 'Mixed'],
+          stock_statuses: ['In Stock', 'Limited Stock', 'Out of Stock']
+        });
+      }
+    };
 
-  const metals = ['Gold', 'Silver', 'Platinum', 'Diamond', 'Mixed'];
-  const stockStatuses = ['In Stock', 'Limited Stock', 'Out of Stock'];
+    fetchConfigurations();
+  }, []);
+
   const sortOptions = [
     { value: 'createdAt', label: 'Date Created' },
     { value: 'name', label: 'Name' },
@@ -87,7 +108,7 @@ const ProductFilters = ({ filters, onFilterChange, stats }) => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
           >
             <option value="">All Categories</option>
-            {categories.map(category => (
+            {configurations.categories?.map(category => (
               <option key={category} value={category}>
                 {category}
                 {stats.categories.find(c => c._id === category) && 
@@ -109,7 +130,7 @@ const ProductFilters = ({ filters, onFilterChange, stats }) => {
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
           >
             <option value="">All Metals</option>
-            {metals.map(metal => (
+            {configurations.metals?.map(metal => (
               <option key={metal} value={metal}>
                 {metal}
                 {stats.metals.find(m => m._id === metal) && 
@@ -215,7 +236,7 @@ const ProductFilters = ({ filters, onFilterChange, stats }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value="">All Stock Status</option>
-                {stockStatuses.map(status => (
+                {configurations.stock_statuses?.map(status => (
                   <option key={status} value={status}>{status}</option>
                 ))}
               </select>

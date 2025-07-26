@@ -1,4 +1,67 @@
 const { body } = require('express-validator');
+const Configuration = require('../models/Configuration');
+
+// Helper function to get valid options from configuration
+const getValidOptions = async (configKey) => {
+  try {
+    const config = await Configuration.getConfig(configKey);
+    return config || [];
+  } catch (error) {
+    console.error(`Error fetching ${configKey} configuration:`, error);
+    return [];
+  }
+};
+
+// Dynamic validation for category
+const validateCategory = async (value) => {
+  const validCategories = await getValidOptions('categories');
+  if (validCategories.length > 0 && !validCategories.includes(value)) {
+    throw new Error(`Invalid category. Valid options: ${validCategories.join(', ')}`);
+  }
+  return true;
+};
+
+// Dynamic validation for metal
+const validateMetal = async (value) => {
+  const validMetals = await getValidOptions('metals');
+  if (validMetals.length > 0 && !validMetals.includes(value)) {
+    throw new Error(`Invalid metal type. Valid options: ${validMetals.join(', ')}`);
+  }
+  return true;
+};
+
+// Dynamic validation for purity
+const validatePurity = async (value) => {
+  const validPurities = await getValidOptions('purities');
+  if (validPurities.length > 0 && !validPurities.includes(value)) {
+    throw new Error(`Invalid purity. Valid options: ${validPurities.join(', ')}`);
+  }
+  return true;
+};
+
+// Dynamic validation for weight unit
+const validateWeightUnit = async (weightData) => {
+  if (weightData) {
+    const weight = JSON.parse(weightData);
+    const validUnits = await getValidOptions('weight_units');
+    if (validUnits.length > 0 && !validUnits.includes(weight.unit)) {
+      throw new Error(`Invalid weight unit. Valid options: ${validUnits.join(', ')}`);
+    }
+  }
+  return true;
+};
+
+// Dynamic validation for dimension unit
+const validateDimensionUnit = async (dimensionData) => {
+  if (dimensionData) {
+    const dimensions = JSON.parse(dimensionData);
+    const validUnits = await getValidOptions('dimension_units');
+    if (validUnits.length > 0 && dimensions.unit && !validUnits.includes(dimensions.unit)) {
+      throw new Error(`Invalid dimension unit. Valid options: ${validUnits.join(', ')}`);
+    }
+  }
+  return true;
+};
 
 // Validation rules for creating a product
 const validateCreateProduct = [
@@ -13,20 +76,14 @@ const validateCreateProduct = [
     .withMessage('Description must be between 10 and 2000 characters'),
     
   body('category')
-    .isIn([
-      'Necklaces', 'Rings', 'Earrings', 'Bracelets', 'Bangles', 
-      'Chains', 'Pendants', 'Wedding Sets', 'Traditional', 'Modern', 'Other'
-    ])
-    .withMessage('Invalid category selected'),
+    .custom(validateCategory),
     
   body('metal')
-    .isIn(['Gold', 'Silver', 'Platinum', 'Diamond', 'Mixed'])
-    .withMessage('Invalid metal type selected'),
+    .custom(validateMetal),
     
   body('purity')
     .optional()
-    .isIn(['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'])
-    .withMessage('Invalid purity selected'),
+    .custom(validatePurity),
     
   body('price')
     .isFloat({ min: 0 })
@@ -52,9 +109,7 @@ const validateCreateProduct = [
           if (typeof weight.value !== 'number' || weight.value < 0) {
             throw new Error('Weight value must be a positive number');
           }
-          if (!['grams', 'carats'].includes(weight.unit)) {
-            throw new Error('Weight unit must be either grams or carats');
-          }
+          return validateWeightUnit(value);
         } catch (error) {
           throw new Error('Invalid weight format');
         }
@@ -125,9 +180,7 @@ const validateCreateProduct = [
           if (dimensions.height && typeof dimensions.height !== 'number') {
             throw new Error('Height must be a number');
           }
-          if (dimensions.unit && !['mm', 'cm', 'inches'].includes(dimensions.unit)) {
-            throw new Error('Dimension unit must be mm, cm, or inches');
-          }
+          return validateDimensionUnit(value);
         } catch (error) {
           throw new Error('Invalid dimensions format');
         }
@@ -164,21 +217,15 @@ const validateUpdateProduct = [
     
   body('category')
     .optional()
-    .isIn([
-      'Necklaces', 'Rings', 'Earrings', 'Bracelets', 'Bangles', 
-      'Chains', 'Pendants', 'Wedding Sets', 'Traditional', 'Modern', 'Other'
-    ])
-    .withMessage('Invalid category selected'),
+    .custom(validateCategory),
     
   body('metal')
     .optional()
-    .isIn(['Gold', 'Silver', 'Platinum', 'Diamond', 'Mixed'])
-    .withMessage('Invalid metal type selected'),
+    .custom(validateMetal),
     
   body('purity')
     .optional()
-    .isIn(['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'])
-    .withMessage('Invalid purity selected'),
+    .custom(validatePurity),
     
   body('price')
     .optional()
@@ -203,9 +250,7 @@ const validateUpdateProduct = [
           if (typeof weight.value !== 'number' || weight.value < 0) {
             throw new Error('Weight value must be a positive number');
           }
-          if (!['grams', 'carats'].includes(weight.unit)) {
-            throw new Error('Weight unit must be either grams or carats');
-          }
+          return validateWeightUnit(value);
         } catch (error) {
           throw new Error('Invalid weight format');
         }
@@ -224,6 +269,20 @@ const validateUpdateProduct = [
           }
         } catch (error) {
           throw new Error('Invalid stock format');
+        }
+      }
+      return true;
+    }),
+    
+  body('dimensions')
+    .optional()
+    .custom((value) => {
+      if (value) {
+        try {
+          const dimensions = JSON.parse(value);
+          return validateDimensionUnit(value);
+        } catch (error) {
+          throw new Error('Invalid dimensions format');
         }
       }
       return true;

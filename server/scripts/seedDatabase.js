@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const Configuration = require('../models/Configuration');
 const database = require('../config/database');
 require('dotenv').config();
 
@@ -30,7 +31,7 @@ const seedUsers = async () => {
       console.log('ℹ️ Admin user already exists');
     }
 
-    // Create sample customer
+    // Create sample customer (optional - can be removed in production)
     const customerExists = await User.findOne({ email: 'customer@example.com' });
     
     if (!customerExists) {
@@ -63,125 +64,95 @@ const seedUsers = async () => {
   }
 };
 
-const seedProducts = async () => {
+const seedConfigurations = async () => {
   try {
-    const productCount = await Product.countDocuments();
+    const admin = await User.findOne({ role: 'admin' });
+    if (!admin) {
+      console.log('⚠️ Admin user not found. Please run user seeding first.');
+      return;
+    }
+
+    const configCount = await Configuration.countDocuments();
     
-    if (productCount === 0) {
-      const admin = await User.findOne({ role: 'admin' });
-      
-      const sampleProducts = [
+    if (configCount === 0) {
+      const defaultConfigs = [
         {
-          name: 'Elegant Gold Necklace',
-          description: 'Beautiful 22K gold necklace with intricate traditional design. Perfect for weddings and special occasions.',
-          category: 'Necklaces',
-          subcategory: 'Traditional',
-          metal: 'Gold',
-          purity: '22K',
-          weight: { value: 25.5, unit: 'grams' },
-          price: 125000,
-          discountPrice: 118000,
-          images: [{
-            url: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=500&h=500&fit=crop',
-            alt: 'Elegant Gold Necklace',
-            isPrimary: true
-          }],
-          stock: { quantity: 5 },
-          features: ['22K Gold', 'Traditional Design', 'Handcrafted', 'BIS Hallmarked'],
-          tags: ['wedding', 'traditional', 'gold', 'necklace'],
-          isFeatured: true,
+          key: 'categories',
+          value: [
+            'Necklaces', 'Rings', 'Earrings', 'Bracelets', 'Bangles',
+            'Chains', 'Pendants', 'Wedding Sets', 'Traditional', 'Modern', 'Other'
+          ],
+          description: 'Product categories for jewelry items',
           createdBy: admin._id
         },
         {
-          name: 'Diamond Solitaire Ring',
-          description: 'Stunning diamond solitaire ring with brilliant cut diamond. Perfect for engagements and proposals.',
-          category: 'Rings',
-          subcategory: 'Engagement',
-          metal: 'Diamond',
-          purity: '18K',
-          weight: { value: 2.5, unit: 'carats' },
-          price: 250000,
-          images: [{
-            url: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=500&h=500&fit=crop',
-            alt: 'Diamond Solitaire Ring',
-            isPrimary: true
-          }],
-          stock: { quantity: 3 },
-          features: ['Natural Diamond', '18K Gold Setting', 'Certified', 'Brilliant Cut'],
-          tags: ['diamond', 'engagement', 'ring', 'solitaire'],
-          isFeatured: true,
+          key: 'metals',
+          value: ['Gold', 'Silver', 'Platinum', 'Diamond', 'Mixed'],
+          description: 'Available metal types',
           createdBy: admin._id
         },
         {
-          name: 'Silver Jhumka Earrings',
-          description: 'Traditional silver jhumka earrings with oxidized finish. Lightweight and comfortable for daily wear.',
-          category: 'Earrings',
-          subcategory: 'Traditional',
-          metal: 'Silver',
-          purity: '925 Silver',
-          weight: { value: 15.2, unit: 'grams' },
-          price: 3500,
-          discountPrice: 2800,
-          images: [{
-            url: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=500&h=500&fit=crop',
-            alt: 'Silver Jhumka Earrings',
-            isPrimary: true
-          }],
-          stock: { quantity: 15 },
-          features: ['925 Silver', 'Oxidized Finish', 'Lightweight', 'Traditional Design'],
-          tags: ['silver', 'jhumka', 'traditional', 'earrings'],
+          key: 'purities',
+          value: ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'],
+          description: 'Metal purity options',
           createdBy: admin._id
         },
         {
-          name: 'Gold Bracelet Chain',
-          description: 'Delicate gold chain bracelet perfect for layering or wearing alone. Adjustable length.',
-          category: 'Bracelets',
-          subcategory: 'Modern',
-          metal: 'Gold',
-          purity: '18K',
-          weight: { value: 8.5, unit: 'grams' },
-          price: 45000,
-          images: [{
-            url: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=500&h=500&fit=crop',
-            alt: 'Gold Bracelet Chain',
-            isPrimary: true
-          }],
-          stock: { quantity: 8 },
-          features: ['18K Gold', 'Adjustable Length', 'Delicate Design', 'BIS Hallmarked'],
-          tags: ['gold', 'bracelet', 'chain', 'modern'],
+          key: 'weight_units',
+          value: ['grams', 'carats'],
+          description: 'Weight measurement units',
           createdBy: admin._id
         },
         {
-          name: 'Bridal Wedding Set',
-          description: 'Complete bridal jewelry set including necklace, earrings, and maang tikka. Perfect for Indian weddings.',
-          category: 'Wedding Sets',
-          subcategory: 'Bridal',
-          metal: 'Gold',
-          purity: '22K',
-          weight: { value: 85.5, unit: 'grams' },
-          price: 425000,
-          discountPrice: 399000,
-          images: [{
-            url: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=500&h=500&fit=crop',
-            alt: 'Bridal Wedding Set',
-            isPrimary: true
-          }],
-          stock: { quantity: 2 },
-          features: ['22K Gold', 'Complete Set', 'Bridal Design', 'Handcrafted', 'BIS Hallmarked'],
-          tags: ['bridal', 'wedding', 'set', 'gold', 'traditional'],
-          isFeatured: true,
+          key: 'dimension_units',
+          value: ['mm', 'cm', 'inches'],
+          description: 'Dimension measurement units',
+          createdBy: admin._id
+        },
+        {
+          key: 'stock_statuses',
+          value: ['In Stock', 'Limited Stock', 'Out of Stock'],
+          description: 'Product stock status options',
+          createdBy: admin._id
+        },
+        {
+          key: 'order_statuses',
+          value: ['Pending', 'Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
+          description: 'Order status options',
+          createdBy: admin._id
+        },
+        {
+          key: 'payment_methods',
+          value: ['COD', 'Online', 'Bank Transfer'],
+          description: 'Available payment methods',
+          createdBy: admin._id
+        },
+        {
+          key: 'site_settings',
+          value: {
+            siteName: 'Sri Vasavi Jewels',
+            siteDescription: 'Premium Jewelry Collection',
+            contactEmail: 'info@srivasavijewels.com',
+            contactPhone: '+91 9876543210',
+            address: 'Jewelry Street, Gold Market, India',
+            currency: 'INR',
+            currencySymbol: '₹',
+            taxRate: 3, // 3% GST
+            shippingCost: 100
+          },
+          description: 'General site settings and information',
           createdBy: admin._id
         }
       ];
 
-      await Product.insertMany(sampleProducts);
-      console.log(`✅ ${sampleProducts.length} sample products created successfully`);
+      await Configuration.insertMany(defaultConfigs);
+      console.log('✅ Default configurations created successfully');
     } else {
-      console.log(`ℹ️ ${productCount} products already exist in database`);
+      console.log('ℹ️ Configurations already exist');
     }
 
   } catch (error) {
-    console.error('❌ Error seeding products:', error.message);
+    console.error('❌ Error seeding configurations:', error.message);
   }
 };
 
@@ -192,30 +163,37 @@ const seedDatabase = async () => {
     // Connect to database
     const connected = await database.connect();
     if (!connected) {
-      console.error('❌ Could not connect to database');
+      console.error('❌ Failed to connect to database');
       process.exit(1);
     }
 
-    // Seed data
+    // Seed users first (admin is required for configurations)
     await seedUsers();
-    await seedProducts();
-
-    console.log('✅ Database seeding completed successfully!');
-    console.log('\n📋 Login Credentials:');
-    console.log('👨‍💼 Admin: admin@srivasavijewels.com / Admin@123!');
-    console.log('👤 Customer: customer@example.com / Customer@123!');
+    
+    // Seed configurations
+    await seedConfigurations();
+    
+    console.log('🎉 Database seeding completed successfully!');
+    console.log('\n📋 Summary:');
+    console.log('✅ Admin user ready');
+    console.log('✅ Sample customer ready (optional)');
+    console.log('✅ System configurations initialized');
+    console.log('\n🚀 You can now:');
+    console.log('1. Login as admin and start adding products');
+    console.log('2. Customize categories/metals via Settings tab');
+    console.log('3. Build your jewelry catalog from scratch');
     
   } catch (error) {
-    console.error('❌ Error during database seeding:', error.message);
+    console.error('❌ Database seeding failed:', error.message);
   } finally {
     await database.disconnect();
     process.exit(0);
   }
 };
 
-// Run seeder if called directly
+// Run seeding if this file is executed directly
 if (require.main === module) {
   seedDatabase();
 }
 
-module.exports = { seedDatabase, seedUsers, seedProducts };
+module.exports = { seedDatabase, seedUsers, seedConfigurations };
