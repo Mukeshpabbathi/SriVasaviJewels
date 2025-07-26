@@ -1,284 +1,391 @@
-import React, { useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import ResponsiveImage from './common/ResponsiveImage';
+import CartIcon from './Cart/CartIcon';
+import ShoppingCart from './Cart/ShoppingCart';
+import axios from 'axios';
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { addToCart } = useCart();
-  const [selectedImage, setSelectedImage] = useState(0);
+  
+  const [product, setProduct] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isCartOpen, setIsCartOpen] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
   const [quantity, setQuantity] = useState(1);
-  const [showAddedMessage, setShowAddedMessage] = useState(false);
 
-  // Mock product data - in real app, this would come from API
-  const product = {
-    id: parseInt(id),
-    name: 'Royal Gold Necklace Set',
-    price: 85000,
-    originalPrice: 95000,
-    images: [
-      'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=600&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=600&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=600&h=600&fit=crop',
-      'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=600&h=600&fit=crop'
-    ],
-    description: 'Exquisite handcrafted gold necklace set featuring traditional Indian motifs with contemporary design elements. This stunning piece is perfect for weddings, festivals, and special occasions.',
-    features: [
-      '22K Gold Purity',
-      'Handcrafted by Master Artisans',
-      'Traditional Indian Design',
-      'Includes Matching Earrings',
-      'BIS Hallmarked',
-      'Lifetime Warranty'
-    ],
-    specifications: {
-      'Metal': '22K Gold',
-      'Weight': '45.5 grams',
-      'Length': '18 inches',
-      'Clasp': 'Secure Hook',
-      'Occasion': 'Wedding, Festival',
-      'Care': 'Store in soft cloth'
-    },
-    rating: 4.8,
-    reviews: 124,
-    inStock: true,
-    category: 'necklaces'
-  };
+  useEffect(() => {
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get(`http://localhost:4000/api/products/${id}`);
+        
+        if (response.data.success) {
+          setProduct(response.data.data.product);
+          setRelatedProducts(response.data.data.relatedProducts || []);
+        } else {
+          navigate('/collections');
+        }
+      } catch (error) {
+        console.error('Error fetching product:', error);
+        navigate('/collections');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchProduct();
+    }
+  }, [id, navigate]);
 
   const handleAddToCart = () => {
-    for (let i = 0; i < quantity; i++) {
-      addToCart({
-        id: product.id,
-        name: product.name,
-        price: product.price,
-        image: product.images[0]
-      });
+    if (product) {
+      for (let i = 0; i < quantity; i++) {
+        addToCart(product);
+      }
+      setAddedToCart(true);
+      setTimeout(() => setAddedToCart(false), 2000);
     }
-    setShowAddedMessage(true);
-    setTimeout(() => setShowAddedMessage(false), 3000);
   };
 
-  const relatedProducts = [
-    {
-      id: 2,
-      name: 'Diamond Solitaire Ring',
-      price: 125000,
-      image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=300&h=300&fit=crop'
-    },
-    {
-      id: 3,
-      name: 'Pearl Drop Earrings',
-      price: 35000,
-      image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=300&h=300&fit=crop'
-    },
-    {
-      id: 4,
-      name: 'Gold Tennis Bracelet',
-      price: 65000,
-      image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=300&h=300&fit=crop'
-    }
-  ];
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(price);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        {/* Navigation */}
+        <nav className="bg-white shadow-lg sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <Link to="/" className="flex items-center space-x-2">
+                <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
+                  <span className="text-white font-bold text-lg">💎</span>
+                </div>
+                <span className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-800 bg-clip-text text-transparent">
+                  Sri Vasavi Jewels
+                </span>
+              </Link>
+              <CartIcon onClick={() => setIsCartOpen(true)} />
+            </div>
+          </div>
+        </nav>
+
+        {/* Loading State */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-gray-200 h-96 rounded-lg animate-pulse"></div>
+            <div className="space-y-4">
+              <div className="bg-gray-200 h-8 rounded animate-pulse"></div>
+              <div className="bg-gray-200 h-4 rounded animate-pulse"></div>
+              <div className="bg-gray-200 h-4 rounded w-2/3 animate-pulse"></div>
+              <div className="bg-gray-200 h-12 rounded animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!product) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Product not found</h2>
+          <Link 
+            to="/collections" 
+            className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+          >
+            Back to Collections
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
+      {/* Navigation */}
+      <nav className="bg-white shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <Link to="/" className="text-2xl font-bold text-gold-600">Sri Vasavi Jewels</Link>
-            <nav className="flex space-x-8">
-              <Link to="/" className="text-gray-700 hover:text-gold-600">Home</Link>
-              <Link to="/collections" className="text-gray-700 hover:text-gold-600">Collections</Link>
-              <Link to="/about" className="text-gray-700 hover:text-gold-600">About</Link>
-              <Link to="/contact" className="text-gray-700 hover:text-gold-600">Contact</Link>
-            </nav>
+          <div className="flex justify-between items-center h-16">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">💎</span>
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-800 bg-clip-text text-transparent">
+                Sri Vasavi Jewels
+              </span>
+            </Link>
+            
+            <div className="hidden md:flex items-center space-x-8">
+              <Link to="/" className="text-gray-700 hover:text-yellow-600 font-medium transition-colors">
+                Home
+              </Link>
+              <Link to="/collections" className="text-gray-700 hover:text-yellow-600 font-medium transition-colors">
+                Collections
+              </Link>
+              <Link to="/about" className="text-gray-700 hover:text-yellow-600 font-medium transition-colors">
+                About
+              </Link>
+              <Link to="/contact" className="text-gray-700 hover:text-yellow-600 font-medium transition-colors">
+                Contact
+              </Link>
+            </div>
+            
+            <CartIcon onClick={() => setIsCartOpen(true)} />
           </div>
         </div>
-      </header>
+      </nav>
 
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <nav className="flex text-sm text-gray-500">
-          <Link to="/" className="hover:text-gold-600">Home</Link>
-          <span className="mx-2">/</span>
-          <Link to="/collections" className="hover:text-gold-600">Collections</Link>
-          <span className="mx-2">/</span>
-          <span className="text-gray-900">{product.name}</span>
+        <nav className="flex" aria-label="Breadcrumb">
+          <ol className="flex items-center space-x-4">
+            <li>
+              <Link to="/" className="text-gray-500 hover:text-gray-700">Home</Link>
+            </li>
+            <li>
+              <span className="text-gray-400">/</span>
+            </li>
+            <li>
+              <Link to="/collections" className="text-gray-500 hover:text-gray-700">Collections</Link>
+            </li>
+            <li>
+              <span className="text-gray-400">/</span>
+            </li>
+            <li>
+              <span className="text-gray-900 font-medium">{product.name}</span>
+            </li>
+          </ol>
         </nav>
       </div>
 
+      {/* Product Detail */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Product Images */}
-          <div>
-            <div className="mb-4">
-              <img
-                src={product.images[selectedImage]}
+          <div className="space-y-4">
+            {/* Main Image */}
+            <div className="aspect-square bg-white rounded-lg shadow-lg overflow-hidden">
+              <ResponsiveImage
+                image={product.images?.[selectedImageIndex]}
                 alt={product.name}
-                className="w-full h-96 object-cover rounded-lg shadow-lg"
+                size="large"
+                className="w-full h-full"
               />
             </div>
-            <div className="grid grid-cols-4 gap-2">
-              {product.images.map((image, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSelectedImage(index)}
-                  className={`border-2 rounded-md overflow-hidden ${
-                    selectedImage === index ? 'border-gold-600' : 'border-gray-200'
-                  }`}
-                >
-                  <img
-                    src={image}
-                    alt={`${product.name} ${index + 1}`}
-                    className="w-full h-20 object-cover"
-                  />
-                </button>
-              ))}
-            </div>
+            
+            {/* Image Thumbnails */}
+            {product.images && product.images.length > 1 && (
+              <div className="grid grid-cols-4 gap-2">
+                {product.images.map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`aspect-square bg-white rounded-lg overflow-hidden border-2 transition-colors ${
+                      selectedImageIndex === index 
+                        ? 'border-yellow-600' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <ResponsiveImage
+                      image={image}
+                      alt={`${product.name} - Image ${index + 1}`}
+                      size="small"
+                      className="w-full h-full"
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Product Info */}
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
-            
-            <div className="flex items-center mb-4">
-              <div className="flex items-center">
-                {[...Array(5)].map((_, i) => (
-                  <svg
-                    key={i}
-                    className={`w-5 h-5 ${i < Math.floor(product.rating) ? 'text-yellow-400' : 'text-gray-300'}`}
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
-                <span className="ml-2 text-sm text-gray-600">
-                  {product.rating} ({product.reviews} reviews)
+          <div className="space-y-6">
+            {/* Basic Info */}
+            <div>
+              <div className="flex items-center space-x-2 mb-2">
+                <span className="text-sm text-gray-500">{product.category}</span>
+                <span className="text-gray-300">•</span>
+                <span className="text-sm text-gray-500">{product.metal}</span>
+                {product.purity && (
+                  <>
+                    <span className="text-gray-300">•</span>
+                    <span className="text-sm text-gray-500">{product.purity}</span>
+                  </>
+                )}
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
+              <p className="text-gray-600 text-lg leading-relaxed">{product.description}</p>
+            </div>
+
+            {/* Pricing */}
+            <div className="border-t border-b border-gray-200 py-6">
+              <div className="flex items-center space-x-4 mb-4">
+                <span className="text-3xl font-bold text-gray-900">
+                  {formatPrice(product.finalPrice)}
+                </span>
+                {product.discountPrice && (
+                  <>
+                    <span className="text-xl text-gray-500 line-through">
+                      {formatPrice(product.price)}
+                    </span>
+                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
+                      {product.discountPercentage}% OFF
+                    </span>
+                  </>
+                )}
+              </div>
+              
+              {/* Stock Status */}
+              <div className="flex items-center space-x-2">
+                <div className={`w-3 h-3 rounded-full ${
+                  product.stock.quantity > 10 ? 'bg-green-500' :
+                  product.stock.quantity > 0 ? 'bg-yellow-500' : 'bg-red-500'
+                }`}></div>
+                <span className="text-sm text-gray-600">
+                  {product.stock.quantity > 10 ? 'In Stock' :
+                   product.stock.quantity > 0 ? `Only ${product.stock.quantity} left` : 'Out of Stock'}
                 </span>
               </div>
             </div>
 
-            <div className="mb-6">
-              <div className="flex items-center space-x-4">
-                <span className="text-3xl font-bold text-gold-600">
-                  ₹{product.price.toLocaleString()}
-                </span>
-                <span className="text-xl text-gray-500 line-through">
-                  ₹{product.originalPrice.toLocaleString()}
-                </span>
-                <span className="bg-red-100 text-red-800 px-2 py-1 rounded-md text-sm font-medium">
-                  {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
-                </span>
+            {/* Product Details */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold text-gray-900">Product Details</h3>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <span className="text-gray-500">Category:</span>
+                  <span className="ml-2 text-gray-900">{product.category}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Metal:</span>
+                  <span className="ml-2 text-gray-900">{product.metal}</span>
+                </div>
+                {product.purity && (
+                  <div>
+                    <span className="text-gray-500">Purity:</span>
+                    <span className="ml-2 text-gray-900">{product.purity}</span>
+                  </div>
+                )}
+                {product.weight && product.weight.value > 0 && (
+                  <div>
+                    <span className="text-gray-500">Weight:</span>
+                    <span className="ml-2 text-gray-900">{product.weight.value} {product.weight.unit}</span>
+                  </div>
+                )}
               </div>
             </div>
-
-            <p className="text-gray-600 mb-6">{product.description}</p>
 
             {/* Features */}
-            <div className="mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Key Features</h3>
-              <ul className="grid grid-cols-2 gap-2">
-                {product.features.map((feature, index) => (
-                  <li key={index} className="flex items-center text-sm text-gray-600">
-                    <svg className="w-4 h-4 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    {feature}
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {product.features && product.features.length > 0 && (
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-900">Features</h3>
+                <ul className="space-y-2">
+                  {product.features.map((feature, index) => (
+                    <li key={index} className="flex items-center space-x-2">
+                      <svg className="w-4 h-4 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <span className="text-gray-700">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
-            {/* Quantity and Add to Cart */}
-            <div className="mb-6">
-              <div className="flex items-center space-x-4 mb-4">
+            {/* Add to Cart */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-4">
                 <label className="text-sm font-medium text-gray-700">Quantity:</label>
-                <div className="flex items-center">
+                <div className="flex items-center border border-gray-300 rounded-lg">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 rounded-l-md bg-gray-200 hover:bg-gray-300 flex items-center justify-center"
+                    className="px-3 py-2 text-gray-600 hover:text-gray-800"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 12H4" />
-                    </svg>
+                    -
                   </button>
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="w-16 h-10 text-center border-t border-b border-gray-200 focus:outline-none focus:ring-2 focus:ring-gold-500"
-                  />
+                  <span className="px-4 py-2 border-l border-r border-gray-300">{quantity}</span>
                   <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="w-10 h-10 rounded-r-md bg-gray-200 hover:bg-gray-300 flex items-center justify-center"
+                    onClick={() => setQuantity(Math.min(product.stock.quantity, quantity + 1))}
+                    className="px-3 py-2 text-gray-600 hover:text-gray-800"
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                    </svg>
+                    +
                   </button>
                 </div>
               </div>
 
-              <div className="flex space-x-4">
-                <button
-                  onClick={handleAddToCart}
-                  className="flex-1 bg-gold-600 hover:bg-gold-700 text-white py-3 px-6 rounded-md font-medium transition duration-300"
-                >
-                  Add to Cart
-                </button>
-                <button className="flex-1 border border-gold-600 text-gold-600 hover:bg-gold-600 hover:text-white py-3 px-6 rounded-md font-medium transition duration-300">
-                  Buy Now
-                </button>
-              </div>
-
-              {showAddedMessage && (
-                <div className="mt-4 p-3 bg-green-100 text-green-800 rounded-md text-sm">
-                  ✅ Added to cart successfully!
-                </div>
-              )}
-            </div>
-
-            {/* Specifications */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Specifications</h3>
-              <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-                {Object.entries(product.specifications).map(([key, value]) => (
-                  <div key={key}>
-                    <dt className="font-medium text-gray-700">{key}:</dt>
-                    <dd className="text-gray-600">{value}</dd>
-                  </div>
-                ))}
-              </dl>
+              <button
+                onClick={handleAddToCart}
+                disabled={addedToCart || product.stock.quantity === 0}
+                className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                  product.stock.quantity === 0
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : addedToCart
+                    ? 'bg-green-500 text-white'
+                    : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                }`}
+              >
+                {product.stock.quantity === 0
+                  ? 'Out of Stock'
+                  : addedToCart
+                  ? 'Added to Cart!'
+                  : `Add ${quantity} to Cart`
+                }
+              </button>
             </div>
           </div>
         </div>
 
         {/* Related Products */}
-        <div className="mt-16">
-          <h2 className="text-2xl font-bold text-gray-900 mb-8">Related Products</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {relatedProducts.map((relatedProduct) => (
-              <div key={relatedProduct.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-                <img
-                  src={relatedProduct.image}
-                  alt={relatedProduct.name}
-                  className="w-full h-48 object-cover"
-                />
-                <div className="p-4">
-                  <h3 className="font-semibold text-gray-900 mb-2">{relatedProduct.name}</h3>
-                  <p className="text-gold-600 font-bold">₹{relatedProduct.price.toLocaleString()}</p>
-                  <Link
-                    to={`/product/${relatedProduct.id}`}
-                    className="mt-3 block w-full bg-gold-600 hover:bg-gold-700 text-white py-2 px-4 rounded-md text-center transition duration-300"
-                  >
-                    View Details
-                  </Link>
-                </div>
-              </div>
-            ))}
+        {relatedProducts.length > 0 && (
+          <div className="mt-16">
+            <h2 className="text-2xl font-bold text-gray-900 mb-8">Related Products</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {relatedProducts.map((relatedProduct) => (
+                <Link
+                  key={relatedProduct._id}
+                  to={`/product/${relatedProduct._id}`}
+                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                >
+                  <div className="aspect-square">
+                    <ResponsiveImage
+                      image={relatedProduct.images?.[0]}
+                      alt={relatedProduct.name}
+                      size="medium"
+                      className="w-full h-full"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-gray-900 mb-2">{relatedProduct.name}</h3>
+                    <p className="text-yellow-600 font-bold">
+                      {formatPrice(relatedProduct.finalPrice)}
+                    </p>
+                  </div>
+                </Link>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Shopping Cart */}
+      <ShoppingCart 
+        isOpen={isCartOpen} 
+        onClose={() => setIsCartOpen(false)} 
+      />
     </div>
   );
 };

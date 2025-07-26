@@ -5,9 +5,9 @@ import Login from './components/Auth/Login';
 import Signup from './components/Auth/Signup';
 import Home from './components/Home';
 import Collections from './components/Collections';
+import ProductDetail from './components/ProductDetail';
 import About from './components/About';
 import Contact from './components/Contact';
-import ProductDetail from './components/ProductDetail';
 import AdminDashboard from './components/Admin/AdminDashboard';
 
 function App() {

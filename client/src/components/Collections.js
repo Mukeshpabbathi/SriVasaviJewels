@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import CartIcon from './Cart/CartIcon';
 import ShoppingCart from './Cart/ShoppingCart';
+import ResponsiveImage from './common/ResponsiveImage';
 import axios from 'axios';
 
 const Collections = () => {
@@ -304,11 +305,14 @@ const Collections = () => {
                 {products.map((product) => (
                   <div key={product._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                     <div className="relative">
-                      <img
-                        src={product.images?.[0]?.url || 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop'}
-                        alt={product.name}
-                        className="w-full h-48 object-cover"
-                      />
+                      <div className="w-full h-48">
+                        <ResponsiveImage
+                          image={product.images?.[0]}
+                          alt={product.name}
+                          size="medium"
+                          className="w-full h-full"
+                        />
+                      </div>
                       {product.discountPrice && (
                         <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-sm font-semibold">
                           {product.discountPercentage}% OFF
@@ -344,24 +348,33 @@ const Collections = () => {
                         </div>
                       </div>
                       
-                      <button
-                        onClick={() => handleAddToCart(product)}
-                        disabled={addedToCart[product._id] || product.stock.quantity === 0}
-                        className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                          product.stock.quantity === 0
-                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleAddToCart(product)}
+                          disabled={addedToCart[product._id] || product.stock.quantity === 0}
+                          className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
+                            product.stock.quantity === 0
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : addedToCart[product._id]
+                              ? 'bg-green-500 text-white'
+                              : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                          }`}
+                        >
+                          {product.stock.quantity === 0
+                            ? 'Out of Stock'
                             : addedToCart[product._id]
-                            ? 'bg-green-500 text-white'
-                            : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                        }`}
-                      >
-                        {product.stock.quantity === 0
-                          ? 'Out of Stock'
-                          : addedToCart[product._id]
-                          ? 'Added to Cart!'
-                          : 'Add to Cart'
-                        }
-                      </button>
+                            ? 'Added!'
+                            : 'Add to Cart'
+                          }
+                        </button>
+                        
+                        <Link
+                          to={`/product/${product._id}`}
+                          className="px-4 py-2 border border-yellow-600 text-yellow-600 rounded-lg hover:bg-yellow-600 hover:text-white transition-colors"
+                        >
+                          View
+                        </Link>
+                      </div>
                     </div>
                   </div>
                 ))}
