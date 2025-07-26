@@ -112,21 +112,31 @@ public
 
 # Mac
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 
 # Windows
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 
+# Linux
+*~
+
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-project
+*.sublime-workspace
 
 # Build directories
 build/
 dist/
+out/
 
 # Uploads directory (local file uploads)
 uploads/
@@ -139,6 +149,7 @@ uploads/
 # Temporary files
 tmp/
 temp/
+.tmp/
 
 # OS generated files
 .DS_Store
@@ -153,4 +164,114 @@ Thumbs.db
 server/*.log
 client/*.log
 *.log
+
+# MongoDB binaries and large files
 mongodb-macos-x86_64-7.0.0/
+mongodb*/
+mongo*/
+
+# Package manager lock files (optional - uncomment if you want to ignore)
+# package-lock.json
+# yarn.lock
+
+# Production builds
+client/build/
+server/dist/
+
+# Environment files
+.env.backup
+.env.save
+
+# Test files
+coverage/
+.nyc_output/
+test-results/
+
+# Backup files
+*.backup
+*.bak
+*.orig
+
+# Archive files
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# Large media files
+*.mp4
+*.avi
+*.mov
+*.wmv
+*.flv
+*.webm
+
+# Large image files (keep smaller ones for web)
+*.psd
+*.ai
+*.eps
+*.tiff
+*.tif
+*.raw
+
+# Documentation builds
+docs/_build/
+site/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Certificates
+*.pem
+*.key
+*.crt
+*.cert
+
+# Local configuration
+config/local.js
+config/local.json
+
+# Runtime directories
+runtime/
+logs/
+
+# Cache directories
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Editor directories and files
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Vercel
+.vercel
+
+# Netlify
+.netlify/
+
+# Local Netlify folder
+.netlify
+
+# Storybook build outputs
+.out
+.storybook-out
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
