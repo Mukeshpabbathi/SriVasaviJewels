@@ -10,42 +10,42 @@ const productSchema = new mongoose.Schema({
   description: {
     type: String,
     required: [true, 'Product description is required'],
+    trim: true,
     maxlength: [2000, 'Description cannot exceed 2000 characters']
   },
   category: {
     type: String,
     required: [true, 'Category is required'],
-    enum: [
-      'Necklaces',
-      'Rings', 
-      'Earrings',
-      'Bracelets',
-      'Bangles',
-      'Chains',
-      'Pendants',
-      'Wedding Sets',
-      'Traditional',
-      'Modern',
-      'Other'
-    ]
+    trim: true
   },
   subcategory: {
     type: String,
-    trim: true
+    trim: true,
+    default: ''
   },
   metal: {
     type: String,
     required: [true, 'Metal type is required'],
-    enum: ['Gold', 'Silver', 'Platinum', 'Diamond', 'Mixed']
+    trim: true
   },
   purity: {
     type: String,
-    enum: ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable']
+    trim: true,
+    default: '',
+    validate: {
+      validator: function(v) {
+        // Allow empty string or valid enum values
+        if (!v || v === '') return true;
+        return ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'].includes(v);
+      },
+      message: 'Invalid purity value. Valid options: 14K, 18K, 22K, 24K, 925 Silver, Platinum 950, Not Applicable'
+    }
   },
   weight: {
     value: {
       type: Number,
-      min: [0, 'Weight cannot be negative']
+      min: [0, 'Weight cannot be negative'],
+      default: 0
     },
     unit: {
       type: String,
@@ -62,10 +62,10 @@ const productSchema = new mongoose.Schema({
     type: Number,
     min: [0, 'Discount price cannot be negative'],
     validate: {
-      validator: function(value) {
-        return !value || value < this.price;
+      validator: function(v) {
+        return !v || v < this.price;
       },
-      message: 'Discount price must be less than original price'
+      message: 'Discount price must be less than regular price'
     }
   },
   images: [{
@@ -85,31 +85,48 @@ const productSchema = new mongoose.Schema({
   stock: {
     quantity: {
       type: Number,
-      required: [true, 'Stock quantity is required'],
-      min: [0, 'Stock cannot be negative'],
+      required: true,
+      min: [0, 'Stock quantity cannot be negative'],
       default: 0
     },
     status: {
       type: String,
-      enum: ['In Stock', 'Out of Stock', 'Limited Stock'],
+      enum: ['In Stock', 'Limited Stock', 'Out of Stock'],
       default: function() {
-        return this.stock.quantity > 10 ? 'In Stock' : 
-               this.stock.quantity > 0 ? 'Limited Stock' : 'Out of Stock';
+        if (this.stock.quantity > 10) return 'In Stock';
+        if (this.stock.quantity > 0) return 'Limited Stock';
+        return 'Out of Stock';
       }
     }
   },
   dimensions: {
-    length: Number,
-    width: Number,
-    height: Number,
+    length: {
+      type: Number,
+      min: [0, 'Length cannot be negative']
+    },
+    width: {
+      type: Number,
+      min: [0, 'Width cannot be negative']
+    },
+    height: {
+      type: Number,
+      min: [0, 'Height cannot be negative']
+    },
     unit: {
       type: String,
       enum: ['mm', 'cm', 'inches'],
       default: 'mm'
     }
   },
-  features: [String],
-  tags: [String],
+  features: [{
+    type: String,
+    trim: true
+  }],
+  tags: [{
+    type: String,
+    trim: true,
+    lowercase: true
+  }],
   isActive: {
     type: Boolean,
     default: true
@@ -118,8 +135,18 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  seoTitle: String,
-  seoDescription: String,
+  seoTitle: {
+    type: String,
+    trim: true,
+    maxlength: [60, 'SEO title cannot exceed 60 characters'],
+    default: ''
+  },
+  seoDescription: {
+    type: String,
+    trim: true,
+    maxlength: [160, 'SEO description cannot exceed 160 characters'],
+    default: ''
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -131,42 +158,68 @@ const productSchema = new mongoose.Schema({
   }
 }, {
   timestamps: true,
-  toJSON: { virtuals: true },
+  toJSON: { 
+    virtuals: true,
+    transform: function(doc, ret) {
+      // Calculate final price (with discount if applicable)
+      ret.finalPrice = ret.discountPrice || ret.price;
+      
+      // Calculate discount percentage
+      if (ret.discountPrice && ret.price > ret.discountPrice) {
+        ret.discountPercentage = Math.round(((ret.price - ret.discountPrice) / ret.price) * 100);
+      } else {
+        ret.discountPercentage = 0;
+      }
+      
+      // Update stock status based on quantity
+      if (ret.stock && typeof ret.stock.quantity === 'number') {
+        if (ret.stock.quantity > 10) {
+          ret.stock.status = 'In Stock';
+        } else if (ret.stock.quantity > 0) {
+          ret.stock.status = 'Limited Stock';
+        } else {
+          ret.stock.status = 'Out of Stock';
+        }
+      }
+      
+      return ret;
+    }
+  },
   toObject: { virtuals: true }
 });
 
-// Virtual for final price (considering discount)
-productSchema.virtual('finalPrice').get(function() {
-  return this.discountPrice || this.price;
-});
-
-// Virtual for discount percentage
-productSchema.virtual('discountPercentage').get(function() {
-  if (this.discountPrice && this.discountPrice < this.price) {
-    return Math.round(((this.price - this.discountPrice) / this.price) * 100);
-  }
-  return 0;
-});
-
-// Index for search functionality
-productSchema.index({ 
-  name: 'text', 
-  description: 'text', 
-  category: 'text',
-  tags: 'text'
-});
-
-// Index for filtering
-productSchema.index({ category: 1, metal: 1, price: 1 });
+// Indexes for better query performance
+productSchema.index({ name: 'text', description: 'text' });
+productSchema.index({ category: 1, metal: 1 });
+productSchema.index({ price: 1 });
 productSchema.index({ isActive: 1, isFeatured: 1 });
+productSchema.index({ createdAt: -1 });
 
-// Pre-save middleware to update stock status
+// Pre-save middleware to ensure only one primary image
 productSchema.pre('save', function(next) {
-  if (this.isModified('stock.quantity')) {
-    this.stock.status = this.stock.quantity > 10 ? 'In Stock' : 
-                       this.stock.quantity > 0 ? 'Limited Stock' : 'Out of Stock';
+  if (this.images && this.images.length > 0) {
+    let primaryCount = 0;
+    this.images.forEach((image, index) => {
+      if (image.isPrimary) {
+        primaryCount++;
+        if (primaryCount > 1) {
+          image.isPrimary = false;
+        }
+      }
+    });
+    
+    // If no primary image is set, make the first one primary
+    if (primaryCount === 0 && this.images.length > 0) {
+      this.images[0].isPrimary = true;
+    }
   }
+  
   next();
+});
+
+// Virtual for search text
+productSchema.virtual('searchText').get(function() {
+  return `${this.name} ${this.description} ${this.category} ${this.metal} ${this.tags.join(' ')}`;
 });
 
 module.exports = mongoose.model('Product', productSchema);

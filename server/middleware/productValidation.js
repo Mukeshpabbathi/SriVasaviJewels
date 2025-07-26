@@ -1,69 +1,6 @@
 const { body } = require('express-validator');
-const Configuration = require('../models/Configuration');
 
-// Helper function to get valid options from configuration
-const getValidOptions = async (configKey) => {
-  try {
-    const config = await Configuration.getConfig(configKey);
-    return config || [];
-  } catch (error) {
-    console.error(`Error fetching ${configKey} configuration:`, error);
-    return [];
-  }
-};
-
-// Dynamic validation for category
-const validateCategory = async (value) => {
-  const validCategories = await getValidOptions('categories');
-  if (validCategories.length > 0 && !validCategories.includes(value)) {
-    throw new Error(`Invalid category. Valid options: ${validCategories.join(', ')}`);
-  }
-  return true;
-};
-
-// Dynamic validation for metal
-const validateMetal = async (value) => {
-  const validMetals = await getValidOptions('metals');
-  if (validMetals.length > 0 && !validMetals.includes(value)) {
-    throw new Error(`Invalid metal type. Valid options: ${validMetals.join(', ')}`);
-  }
-  return true;
-};
-
-// Dynamic validation for purity
-const validatePurity = async (value) => {
-  const validPurities = await getValidOptions('purities');
-  if (validPurities.length > 0 && !validPurities.includes(value)) {
-    throw new Error(`Invalid purity. Valid options: ${validPurities.join(', ')}`);
-  }
-  return true;
-};
-
-// Dynamic validation for weight unit
-const validateWeightUnit = async (weightData) => {
-  if (weightData) {
-    const weight = JSON.parse(weightData);
-    const validUnits = await getValidOptions('weight_units');
-    if (validUnits.length > 0 && !validUnits.includes(weight.unit)) {
-      throw new Error(`Invalid weight unit. Valid options: ${validUnits.join(', ')}`);
-    }
-  }
-  return true;
-};
-
-// Dynamic validation for dimension unit
-const validateDimensionUnit = async (dimensionData) => {
-  if (dimensionData) {
-    const dimensions = JSON.parse(dimensionData);
-    const validUnits = await getValidOptions('dimension_units');
-    if (validUnits.length > 0 && dimensions.unit && !validUnits.includes(dimensions.unit)) {
-      throw new Error(`Invalid dimension unit. Valid options: ${validUnits.join(', ')}`);
-    }
-  }
-  return true;
-};
-
-// Validation rules for creating a product
+// Simplified validation rules for creating a product
 const validateCreateProduct = [
   body('name')
     .trim()
@@ -76,14 +13,14 @@ const validateCreateProduct = [
     .withMessage('Description must be between 10 and 2000 characters'),
     
   body('category')
-    .custom(validateCategory),
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Category is required'),
     
   body('metal')
-    .custom(validateMetal),
-    
-  body('purity')
-    .optional()
-    .custom(validatePurity),
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Metal type is required'),
     
   body('price')
     .isFloat({ min: 0 })
@@ -106,12 +43,17 @@ const validateCreateProduct = [
       if (value) {
         try {
           const weight = JSON.parse(value);
-          if (typeof weight.value !== 'number' || weight.value < 0) {
+          if (weight.value && (typeof weight.value !== 'number' || weight.value < 0)) {
             throw new Error('Weight value must be a positive number');
           }
-          return validateWeightUnit(value);
+          if (weight.unit && !['grams', 'carats'].includes(weight.unit)) {
+            throw new Error('Weight unit must be either grams or carats');
+          }
         } catch (error) {
-          throw new Error('Invalid weight format');
+          if (error.message.includes('Weight')) {
+            throw error;
+          }
+          throw new Error('Invalid weight format - must be valid JSON');
         }
       }
       return true;
@@ -127,7 +69,10 @@ const validateCreateProduct = [
             throw new Error('Stock quantity must be a non-negative number');
           }
         } catch (error) {
-          throw new Error('Invalid stock format');
+          if (error.message.includes('Stock')) {
+            throw error;
+          }
+          throw new Error('Invalid stock format - must be valid JSON');
         }
       }
       return true;
@@ -143,7 +88,10 @@ const validateCreateProduct = [
             throw new Error('Features must be an array');
           }
         } catch (error) {
-          throw new Error('Invalid features format');
+          if (error.message.includes('Features')) {
+            throw error;
+          }
+          throw new Error('Invalid features format - must be valid JSON array');
         }
       }
       return true;
@@ -159,7 +107,10 @@ const validateCreateProduct = [
             throw new Error('Tags must be an array');
           }
         } catch (error) {
-          throw new Error('Invalid tags format');
+          if (error.message.includes('Tags')) {
+            throw error;
+          }
+          throw new Error('Invalid tags format - must be valid JSON array');
         }
       }
       return true;
@@ -180,9 +131,14 @@ const validateCreateProduct = [
           if (dimensions.height && typeof dimensions.height !== 'number') {
             throw new Error('Height must be a number');
           }
-          return validateDimensionUnit(value);
+          if (dimensions.unit && !['mm', 'cm', 'inches'].includes(dimensions.unit)) {
+            throw new Error('Dimension unit must be mm, cm, or inches');
+          }
         } catch (error) {
-          throw new Error('Invalid dimensions format');
+          if (error.message.includes('must be') || error.message.includes('Length') || error.message.includes('Width') || error.message.includes('Height') || error.message.includes('Dimension')) {
+            throw error;
+          }
+          throw new Error('Invalid dimensions format - must be valid JSON');
         }
       }
       return true;
@@ -217,15 +173,15 @@ const validateUpdateProduct = [
     
   body('category')
     .optional()
-    .custom(validateCategory),
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Category cannot be empty'),
     
   body('metal')
     .optional()
-    .custom(validateMetal),
-    
-  body('purity')
-    .optional()
-    .custom(validatePurity),
+    .trim()
+    .isLength({ min: 1 })
+    .withMessage('Metal type cannot be empty'),
     
   body('price')
     .optional()
@@ -247,11 +203,16 @@ const validateUpdateProduct = [
       if (value) {
         try {
           const weight = JSON.parse(value);
-          if (typeof weight.value !== 'number' || weight.value < 0) {
+          if (weight.value && (typeof weight.value !== 'number' || weight.value < 0)) {
             throw new Error('Weight value must be a positive number');
           }
-          return validateWeightUnit(value);
+          if (weight.unit && !['grams', 'carats'].includes(weight.unit)) {
+            throw new Error('Weight unit must be either grams or carats');
+          }
         } catch (error) {
+          if (error.message.includes('Weight')) {
+            throw error;
+          }
           throw new Error('Invalid weight format');
         }
       }
@@ -268,6 +229,9 @@ const validateUpdateProduct = [
             throw new Error('Stock quantity must be a non-negative number');
           }
         } catch (error) {
+          if (error.message.includes('Stock')) {
+            throw error;
+          }
           throw new Error('Invalid stock format');
         }
       }
@@ -279,8 +243,7 @@ const validateUpdateProduct = [
     .custom((value) => {
       if (value) {
         try {
-          const dimensions = JSON.parse(value);
-          return validateDimensionUnit(value);
+          JSON.parse(value);
         } catch (error) {
           throw new Error('Invalid dimensions format');
         }

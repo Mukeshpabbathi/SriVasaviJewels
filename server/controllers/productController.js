@@ -185,13 +185,27 @@ const processUploadedFiles = (req) => {
 // @access  Private/Admin
 const createProduct = async (req, res) => {
   try {
+    console.log('Creating product with data:', {
+      name: req.body.name,
+      category: req.body.category,
+      metal: req.body.metal,
+      price: req.body.price,
+      hasFiles: !!req.files,
+      filesCount: req.files ? Object.keys(req.files).length : 0
+    });
+
     // Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
+      console.log('Validation errors:', errors.array());
       return res.status(400).json({
         success: false,
         message: 'Validation error',
-        errors: errors.array()
+        errors: errors.array().map(err => ({
+          field: err.param,
+          message: err.msg,
+          value: err.value
+        }))
       });
     }
     
@@ -214,32 +228,80 @@ const createProduct = async (req, res) => {
       seoTitle,
       seoDescription
     } = req.body;
+
+    // Validate required fields
+    if (!name || !description || !category || !metal || !price) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        errors: [
+          { field: 'required', message: 'Name, description, category, metal, and price are required' }
+        ]
+      });
+    }
     
     // Process uploaded images
     const images = processUploadedFiles(req);
     
+    // Parse JSON fields safely
+    let parsedWeight, parsedStock, parsedDimensions, parsedFeatures, parsedTags;
+    
+    try {
+      parsedWeight = weight ? JSON.parse(weight) : { value: '', unit: 'grams' };
+    } catch (e) {
+      parsedWeight = { value: '', unit: 'grams' };
+    }
+    
+    try {
+      parsedStock = stock ? JSON.parse(stock) : { quantity: 0 };
+    } catch (e) {
+      parsedStock = { quantity: parseInt(req.body['stock.quantity']) || 0 };
+    }
+    
+    try {
+      parsedDimensions = dimensions ? JSON.parse(dimensions) : undefined;
+    } catch (e) {
+      parsedDimensions = undefined;
+    }
+    
+    try {
+      parsedFeatures = features ? JSON.parse(features) : [];
+    } catch (e) {
+      parsedFeatures = [];
+    }
+    
+    try {
+      parsedTags = tags ? JSON.parse(tags) : [];
+    } catch (e) {
+      parsedTags = [];
+    }
+    
     // Create product
-    const product = await Product.create({
+    const productData = {
       name,
       description,
       category,
-      subcategory,
+      subcategory: subcategory || '',
       metal,
-      purity,
-      weight: weight ? JSON.parse(weight) : undefined,
+      purity: purity || '',
+      weight: parsedWeight,
       price: parseFloat(price),
       discountPrice: discountPrice ? parseFloat(discountPrice) : undefined,
       images,
-      stock: stock ? JSON.parse(stock) : { quantity: 0 },
-      dimensions: dimensions ? JSON.parse(dimensions) : undefined,
-      features: features ? JSON.parse(features) : [],
-      tags: tags ? JSON.parse(tags) : [],
-      isActive: isActive === 'true',
-      isFeatured: isFeatured === 'true',
-      seoTitle,
-      seoDescription,
+      stock: parsedStock,
+      dimensions: parsedDimensions,
+      features: parsedFeatures,
+      tags: parsedTags,
+      isActive: isActive === 'true' || isActive === true,
+      isFeatured: isFeatured === 'true' || isFeatured === true,
+      seoTitle: seoTitle || '',
+      seoDescription: seoDescription || '',
       createdBy: req.user._id
-    });
+    };
+
+    console.log('Creating product with processed data:', productData);
+    
+    const product = await Product.create(productData);
     
     await product.populate('createdBy', 'name email');
     
@@ -253,17 +315,22 @@ const createProduct = async (req, res) => {
     console.error('Create product error:', error);
     
     if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(err => err.message);
+      const messages = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message,
+        value: err.value
+      }));
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
+        message: 'Database validation error',
         errors: messages
       });
     }
     
     res.status(500).json({
       success: false,
-      message: 'Server error creating product'
+      message: 'Server error creating product',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
@@ -279,7 +346,11 @@ const updateProduct = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Validation error',
-        errors: errors.array()
+        errors: errors.array().map(err => ({
+          field: err.param,
+          message: err.msg,
+          value: err.value
+        }))
       });
     }
     
@@ -355,22 +426,52 @@ const updateProduct = async (req, res) => {
     if (name) product.name = name;
     if (description) product.description = description;
     if (category) product.category = category;
-    if (subcategory) product.subcategory = subcategory;
+    if (subcategory !== undefined) product.subcategory = subcategory;
     if (metal) product.metal = metal;
-    if (purity) product.purity = purity;
-    if (weight) product.weight = JSON.parse(weight);
+    if (purity !== undefined) product.purity = purity;
+    if (weight) {
+      try {
+        product.weight = JSON.parse(weight);
+      } catch (e) {
+        product.weight = { value: '', unit: 'grams' };
+      }
+    }
     if (price) product.price = parseFloat(price);
     if (discountPrice !== undefined) {
       product.discountPrice = discountPrice ? parseFloat(discountPrice) : undefined;
     }
-    if (stock) product.stock = JSON.parse(stock);
-    if (dimensions) product.dimensions = JSON.parse(dimensions);
-    if (features) product.features = JSON.parse(features);
-    if (tags) product.tags = JSON.parse(tags);
-    if (isActive !== undefined) product.isActive = isActive === 'true';
-    if (isFeatured !== undefined) product.isFeatured = isFeatured === 'true';
-    if (seoTitle) product.seoTitle = seoTitle;
-    if (seoDescription) product.seoDescription = seoDescription;
+    if (stock) {
+      try {
+        product.stock = JSON.parse(stock);
+      } catch (e) {
+        product.stock = { quantity: 0 };
+      }
+    }
+    if (dimensions) {
+      try {
+        product.dimensions = JSON.parse(dimensions);
+      } catch (e) {
+        product.dimensions = undefined;
+      }
+    }
+    if (features) {
+      try {
+        product.features = JSON.parse(features);
+      } catch (e) {
+        product.features = [];
+      }
+    }
+    if (tags) {
+      try {
+        product.tags = JSON.parse(tags);
+      } catch (e) {
+        product.tags = [];
+      }
+    }
+    if (isActive !== undefined) product.isActive = isActive === 'true' || isActive === true;
+    if (isFeatured !== undefined) product.isFeatured = isFeatured === 'true' || isFeatured === true;
+    if (seoTitle !== undefined) product.seoTitle = seoTitle;
+    if (seoDescription !== undefined) product.seoDescription = seoDescription;
     
     product.updatedBy = req.user._id;
     
@@ -387,17 +488,22 @@ const updateProduct = async (req, res) => {
     console.error('Update product error:', error);
     
     if (error.name === 'ValidationError') {
-      const messages = Object.values(error.errors).map(err => err.message);
+      const messages = Object.values(error.errors).map(err => ({
+        field: err.path,
+        message: err.message,
+        value: err.value
+      }));
       return res.status(400).json({
         success: false,
-        message: 'Validation error',
+        message: 'Database validation error',
         errors: messages
       });
     }
     
     res.status(500).json({
       success: false,
-      message: 'Server error updating product'
+      message: 'Server error updating product',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Internal server error'
     });
   }
 };
