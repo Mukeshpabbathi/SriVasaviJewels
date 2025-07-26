@@ -1,6 +1,8 @@
 const Product = require('../models/Product');
-const { deleteImage } = require('../config/cloudinary');
+const { deleteImage, getImageUrl, hasCloudinaryCredentials } = require('../config/cloudinary');
 const { validationResult } = require('express-validator');
+const path = require('path');
+const fs = require('fs');
 
 // @desc    Get all products with filtering, sorting, and pagination
 // @route   GET /api/admin/products
@@ -144,6 +146,40 @@ const getProductById = async (req, res) => {
   }
 };
 
+// Helper function to process uploaded files
+const processUploadedFiles = (req) => {
+  let images = [];
+  
+  if (req.files) {
+    // Handle primary image
+    if (req.files.primaryImage && req.files.primaryImage[0]) {
+      const file = req.files.primaryImage[0];
+      const imageUrl = hasCloudinaryCredentials ? file.path : `/uploads/products/${file.filename}`;
+      
+      images.push({
+        url: imageUrl,
+        alt: `${req.body.name || 'Product'} - Primary Image`,
+        isPrimary: true
+      });
+    }
+    
+    // Handle gallery images
+    if (req.files.galleryImages) {
+      req.files.galleryImages.forEach((file, index) => {
+        const imageUrl = hasCloudinaryCredentials ? file.path : `/uploads/products/${file.filename}`;
+        
+        images.push({
+          url: imageUrl,
+          alt: `${req.body.name || 'Product'} - Gallery Image ${index + 1}`,
+          isPrimary: false
+        });
+      });
+    }
+  }
+  
+  return images;
+};
+
 // @desc    Create new product
 // @route   POST /api/admin/products
 // @access  Private/Admin
@@ -180,26 +216,7 @@ const createProduct = async (req, res) => {
     } = req.body;
     
     // Process uploaded images
-    let images = [];
-    if (req.files) {
-      if (req.files.primaryImage) {
-        images.push({
-          url: req.files.primaryImage[0].path,
-          alt: `${name} - Primary Image`,
-          isPrimary: true
-        });
-      }
-      
-      if (req.files.galleryImages) {
-        req.files.galleryImages.forEach((file, index) => {
-          images.push({
-            url: file.path,
-            alt: `${name} - Gallery Image ${index + 1}`,
-            isPrimary: false
-          });
-        });
-      }
-    }
+    const images = processUploadedFiles(req);
     
     // Create product
     const product = await Product.create({
@@ -300,10 +317,16 @@ const updateProduct = async (req, res) => {
     if (removeImages) {
       const imagesToRemove = JSON.parse(removeImages);
       for (const imageUrl of imagesToRemove) {
-        // Extract public_id from Cloudinary URL for deletion
-        const publicId = imageUrl.split('/').pop().split('.')[0];
         try {
-          await deleteImage(publicId);
+          if (hasCloudinaryCredentials) {
+            // Extract public_id from Cloudinary URL for deletion
+            const publicId = imageUrl.split('/').pop().split('.')[0];
+            await deleteImage(publicId);
+          } else {
+            // For local storage, extract filename from URL
+            const filename = imageUrl.split('/').pop();
+            await deleteImage(filename);
+          }
         } catch (error) {
           console.error('Error deleting image:', error);
         }
@@ -316,27 +339,16 @@ const updateProduct = async (req, res) => {
     }
     
     // Process new uploaded images
-    if (req.files) {
-      if (req.files.primaryImage) {
-        // Set all existing images as non-primary
+    const newImages = processUploadedFiles(req);
+    
+    // Add new images to existing ones
+    if (newImages.length > 0) {
+      // If new primary image is uploaded, set all existing images as non-primary
+      if (newImages.some(img => img.isPrimary)) {
         product.images.forEach(img => img.isPrimary = false);
-        
-        product.images.push({
-          url: req.files.primaryImage[0].path,
-          alt: `${name || product.name} - Primary Image`,
-          isPrimary: true
-        });
       }
       
-      if (req.files.galleryImages) {
-        req.files.galleryImages.forEach((file, index) => {
-          product.images.push({
-            url: file.path,
-            alt: `${name || product.name} - Gallery Image ${index + 1}`,
-            isPrimary: false
-          });
-        });
-      }
+      product.images.push(...newImages);
     }
     
     // Update fields
@@ -404,11 +416,16 @@ const deleteProduct = async (req, res) => {
       });
     }
     
-    // Delete all associated images from Cloudinary
+    // Delete all associated images
     for (const image of product.images) {
-      const publicId = image.url.split('/').pop().split('.')[0];
       try {
-        await deleteImage(publicId);
+        if (hasCloudinaryCredentials) {
+          const publicId = image.url.split('/').pop().split('.')[0];
+          await deleteImage(publicId);
+        } else {
+          const filename = image.url.split('/').pop();
+          await deleteImage(filename);
+        }
       } catch (error) {
         console.error('Error deleting image:', error);
       }
@@ -451,12 +468,17 @@ const bulkOperations = async (req, res) => {
         // Delete multiple products
         const productsToDelete = await Product.find({ _id: { $in: productIds } });
         
-        // Delete images from Cloudinary
+        // Delete images
         for (const product of productsToDelete) {
           for (const image of product.images) {
-            const publicId = image.url.split('/').pop().split('.')[0];
             try {
-              await deleteImage(publicId);
+              if (hasCloudinaryCredentials) {
+                const publicId = image.url.split('/').pop().split('.')[0];
+                await deleteImage(publicId);
+              } else {
+                const filename = image.url.split('/').pop();
+                await deleteImage(filename);
+              }
             } catch (error) {
               console.error('Error deleting image:', error);
             }
