@@ -39,6 +39,8 @@ let dbConnected = false;
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/admin/products', require('./routes/productRoutes'));
+app.use('/api/admin/config', require('./routes/configRoutes'));
+app.use('/api/config', require('./routes/configRoutes'));
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -63,7 +65,8 @@ app.get('/', (req, res) => {
       health: '/api/health',
       auth: '/api/auth',
       admin: '/api/admin',
-      products: '/api/admin/products'
+      products: '/api/admin/products',
+      config: '/api/config'
     }
   });
 });

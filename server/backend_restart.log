@@ -30,3 +30,14 @@ Login attempt: { email: 'admin@srivasavijewels.com' }
 2025-07-26T21:30:43.369Z - POST /api/auth/login
 Login attempt: { email: 'admin@srivasavijewels.com' }
 ✅ Login successful: admin@srivasavijewels.com (admin)
+2025-07-26T21:31:41.444Z - GET /api/admin/products
+2025-07-26T21:31:42.079Z - GET /api/admin/products
+2025-07-26T21:32:03.604Z - GET /api/admin/products
+2025-07-26T21:32:06.695Z - GET /api/admin/products
+2025-07-26T21:34:00.935Z - GET /api/admin/products
+2025-07-26T21:34:01.541Z - GET /api/admin/products
+2025-07-26T21:37:57.956Z - GET /api/admin/stats
+2025-07-26T21:37:58.216Z - GET /api/admin/stats
+📴 SIGTERM received, shutting down gracefully
+📴 Mongoose disconnected from MongoDB
+📴 MongoDB disconnected

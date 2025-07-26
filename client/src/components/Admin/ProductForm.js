@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
 const ProductForm = ({ product, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -34,20 +35,45 @@ const ProductForm = ({ product, onSave, onCancel }) => {
   const [newFeature, setNewFeature] = useState('');
   const [newTag, setNewTag] = useState('');
   const [loading, setLoading] = useState(false);
+  const [configLoading, setConfigLoading] = useState(true);
 
-  // Categories and options
-  const categories = [
-    'Necklaces', 'Rings', 'Earrings', 'Bracelets', 'Bangles',
-    'Chains', 'Pendants', 'Wedding Sets', 'Traditional', 'Modern', 'Other'
-  ];
+  // Dynamic configurations from database
+  const [configurations, setConfigurations] = useState({
+    categories: [],
+    metals: [],
+    purities: [],
+    weight_units: [],
+    dimension_units: []
+  });
 
-  const metals = ['Gold', 'Silver', 'Platinum', 'Diamond', 'Mixed'];
-  const purities = ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'];
-  const weightUnits = ['grams', 'carats'];
-  const dimensionUnits = ['mm', 'cm', 'inches'];
+  // Fetch configurations from database
+  const fetchConfigurations = async () => {
+    try {
+      setConfigLoading(true);
+      const response = await axios.get('http://localhost:4000/api/config/public');
+      
+      if (response.data.success) {
+        setConfigurations(response.data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching configurations:', error);
+      // Fallback to default values if API fails
+      setConfigurations({
+        categories: ['Necklaces', 'Rings', 'Earrings', 'Bracelets', 'Bangles', 'Chains', 'Pendants', 'Wedding Sets', 'Traditional', 'Modern', 'Other'],
+        metals: ['Gold', 'Silver', 'Platinum', 'Diamond', 'Mixed'],
+        purities: ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'],
+        weight_units: ['grams', 'carats'],
+        dimension_units: ['mm', 'cm', 'inches']
+      });
+    } finally {
+      setConfigLoading(false);
+    }
+  };
 
   // Initialize form with product data if editing
   useEffect(() => {
+    fetchConfigurations();
+    
     if (product) {
       setFormData({
         name: product.name || '',
@@ -190,6 +216,19 @@ const ProductForm = ({ product, onSave, onCancel }) => {
     }
   };
 
+  if (configLoading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg p-8">
+          <div className="flex items-center space-x-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-yellow-600"></div>
+            <span className="text-gray-600">Loading configurations...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -238,7 +277,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value="">Select Category</option>
-                {categories.map(cat => (
+                {configurations.categories?.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
                 ))}
               </select>
@@ -270,7 +309,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value="">Select Metal</option>
-                {metals.map(metal => (
+                {configurations.metals?.map(metal => (
                   <option key={metal} value={metal}>{metal}</option>
                 ))}
               </select>
@@ -287,7 +326,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
                 <option value="">Select Purity</option>
-                {purities.map(purity => (
+                {configurations.purities?.map(purity => (
                   <option key={purity} value={purity}>{purity}</option>
                 ))}
               </select>
@@ -353,7 +392,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
               >
-                {weightUnits.map(unit => (
+                {configurations.weight_units?.map(unit => (
                   <option key={unit} value={unit}>{unit}</option>
                 ))}
               </select>
