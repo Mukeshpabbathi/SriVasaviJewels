@@ -2,6 +2,19 @@ const Product = require('../models/Product');
 
 // Enhanced jewelry knowledge base
 const JEWELRY_KNOWLEDGE = {
+  store_info: {
+    name: 'Sri Vasavi Jewels',
+    address: 'Main Branch: 123 Jewelry Street, Gold Market, Hyderabad, Telangana 500001',
+    phone: '+91 9876543210',
+    email: 'info@srivasavijewels.com',
+    hours: {
+      weekdays: '10:00 AM - 8:00 PM',
+      weekends: '10:00 AM - 9:00 PM',
+      sunday: '11:00 AM - 7:00 PM'
+    },
+    services: ['Custom Jewelry Design', 'Jewelry Repair', 'Gold Exchange', 'Certificate Verification', 'Free Cleaning'],
+    specialties: ['Traditional Indian Jewelry', 'Modern Designs', 'Wedding Collections', 'Diamond Jewelry', 'Gold Ornaments']
+  },
   metals: {
     gold: {
       purities: {
@@ -238,14 +251,16 @@ class ChatController {
       }
     }
 
-    // Action detection
-    if (message.includes('show') || message.includes('find') || message.includes('search')) intent.type = 'product_search';
-    if (message.includes('care') || message.includes('clean') || message.includes('maintain')) intent.type = 'care_advice';
-    if (message.includes('size') || message.includes('fit') || message.includes('measure')) intent.type = 'sizing_help';
-    if (message.includes('price') || message.includes('cost') || message.includes('expensive') || message.includes('budget')) intent.type = 'pricing_info';
-    if (message.includes('trending') || message.includes('popular') || message.includes('latest') || message.includes('fashion')) intent.type = 'trending';
-    if (message.includes('compare') || message.includes('difference') || message.includes('vs')) intent.type = 'comparison';
-    if (message.includes('invest') || message.includes('value') || message.includes('worth')) intent.type = 'investment_advice';
+    // Action detection - order matters!
+    if (message.includes('find rings size') || message.includes('show rings size') || message.includes('rings size')) intent.type = 'product_search';
+    else if (message.includes('show') || message.includes('find') || message.includes('search')) intent.type = 'product_search';
+    else if (message.includes('care') || message.includes('clean') || message.includes('maintain')) intent.type = 'care_advice';
+    else if (message.includes('size') || message.includes('fit') || message.includes('measure')) intent.type = 'sizing_help';
+    else if (message.includes('price') || message.includes('cost') || message.includes('expensive') || message.includes('budget')) intent.type = 'pricing_info';
+    else if (message.includes('trending') || message.includes('popular') || message.includes('latest') || message.includes('fashion')) intent.type = 'trending';
+    else if (message.includes('compare') || message.includes('difference') || message.includes('vs')) intent.type = 'comparison';
+    else if (message.includes('invest') || message.includes('value') || message.includes('worth')) intent.type = 'investment_advice';
+    else if (message.includes('location') || message.includes('address') || message.includes('store') || message.includes('shop') || message.includes('visit') || message.includes('where')) intent.type = 'store_info';
 
     return intent;
   }
@@ -288,6 +303,10 @@ class ChatController {
         response = ChatController.handleInvestmentAdvice(intent);
         break;
       
+      case 'store_info':
+        response = ChatController.handleStoreInfo(intent, originalMessage);
+        break;
+      
       default:
         response = ChatController.handleGeneral(originalMessage, intent);
         break;
@@ -302,7 +321,55 @@ class ChatController {
       let query = { isActive: true };
       let responseText = 'I found ';
 
-      // Build search query
+      // Handle specific ring size searches
+      if (message.includes('rings size') || message.includes('ring size')) {
+        const sizeMatch = message.match(/size (\d+)/i);
+        if (sizeMatch) {
+          const size = sizeMatch[1];
+          query.category = new RegExp('rings', 'i');
+          
+          // Search for rings (we'll add size filtering later when size field is added to products)
+          const rings = await Product.find(query)
+            .select('name price discountPrice category metal images finalPrice stock')
+            .limit(6)
+            .sort({ isFeatured: -1, createdAt: -1 });
+
+          if (rings.length > 0) {
+            return {
+              response: `Here are beautiful rings that would work for size ${size}! Our experts can help with exact sizing:`,
+              products: rings.map(product => ({
+                id: product._id,
+                name: product.name,
+                price: product.finalPrice,
+                originalPrice: product.price,
+                category: product.category,
+                metal: product.metal,
+                image: product.images?.[0]?.url,
+                url: `/product/${product._id}`,
+                inStock: product.stock?.quantity > 0
+              })),
+              quickReplies: [
+                'Visit for sizing',
+                'Ring size guide',
+                'Other ring sizes',
+                'Store location'
+              ]
+            };
+          } else {
+            return {
+              response: `I don't have rings in our current collection, but our experts can help you find the perfect ring in size ${size}. Visit our store for personalized assistance!`,
+              quickReplies: [
+                'Store location',
+                'Custom rings',
+                'Call store',
+                'Show all jewelry'
+              ]
+            };
+          }
+        }
+      }
+
+      // Build search query for other searches
       if (intent.entities.metal) {
         query.metal = new RegExp(intent.entities.metal, 'i');
         responseText += `${intent.entities.metal} `;
@@ -361,15 +428,15 @@ class ChatController {
             'Show all products',
             'Different price range',
             'Other categories',
-            'What\'s popular?'
+            'Visit store'
           ]
         };
       }
     } catch (error) {
       console.error('Product search error:', error);
       return {
-        response: 'I\'m having trouble searching for products right now. Please try again or browse our collections directly.',
-        quickReplies: QUICK_REPLIES.greeting
+        response: 'I\'m having trouble searching for products right now. Please try again or visit our store for personalized assistance!',
+        quickReplies: ['Store location', 'Call store', 'Try again', 'Browse collections']
       };
     }
   }
@@ -553,7 +620,36 @@ class ChatController {
     };
   }
 
-  // Enhanced general conversation
+  // New store info handler
+  static handleStoreInfo(intent, message) {
+    const storeInfo = JEWELRY_KNOWLEDGE.store_info;
+    
+    if (message.includes('location') || message.includes('address') || message.includes('where')) {
+      return {
+        response: `📍 Sri Vasavi Jewels Location:\n\n${storeInfo.address}\n\n📞 Contact:\nPhone: ${storeInfo.phone}\nEmail: ${storeInfo.email}\n\n🕒 Store Hours:\nMon-Fri: ${storeInfo.hours.weekdays}\nSat: ${storeInfo.hours.weekends}\nSun: ${storeInfo.hours.sunday}\n\nWe'd love to see you in person! Our experts can help you find the perfect piece.`,
+        quickReplies: ['Get directions', 'Call store', 'Store services', 'Visit for sizing']
+      };
+    }
+    
+    if (message.includes('hours') || message.includes('time') || message.includes('open')) {
+      return {
+        response: `🕒 Sri Vasavi Jewels Store Hours:\n\nMonday - Friday: ${storeInfo.hours.weekdays}\nSaturday: ${storeInfo.hours.weekends}\nSunday: ${storeInfo.hours.sunday}\n\n📍 Location: ${storeInfo.address}\n📞 Phone: ${storeInfo.phone}\n\nWe're here to help you find beautiful jewelry!`,
+        quickReplies: ['Store location', 'Call store', 'Store services', 'Book appointment']
+      };
+    }
+    
+    if (message.includes('service') || message.includes('repair') || message.includes('custom')) {
+      return {
+        response: `🔧 Our Services at Sri Vasavi Jewels:\n\n${storeInfo.services.map(service => `• ${service}`).join('\n')}\n\n✨ We Specialize In:\n${storeInfo.specialties.map(specialty => `• ${specialty}`).join('\n')}\n\nVisit us for personalized service and expert advice!`,
+        quickReplies: ['Store location', 'Store hours', 'Custom design', 'Jewelry repair']
+      };
+    }
+    
+    return {
+      response: `🏪 Welcome to Sri Vasavi Jewels!\n\n📍 ${storeInfo.address}\n📞 ${storeInfo.phone}\n📧 ${storeInfo.email}\n\n🕒 Hours: ${storeInfo.hours.weekdays} (Mon-Fri)\n\nWe offer expert jewelry services and have a beautiful collection waiting for you. What would you like to know?`,
+      quickReplies: ['Store location', 'Store hours', 'Store services', 'Visit store']
+    };
+  }
   static handleGeneral(message, intent) {
     const greetings = ['hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening'];
     const thanks = ['thank', 'thanks', 'appreciate'];
