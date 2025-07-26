@@ -41,6 +41,7 @@ app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/admin/products', require('./routes/productRoutes'));
 app.use('/api/admin/config', require('./routes/configRoutes'));
 app.use('/api/config', require('./routes/configRoutes'));
+app.use('/api/products', require('./routes/publicProductRoutes')); // Public product routes
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -65,8 +66,9 @@ app.get('/', (req, res) => {
       health: '/api/health',
       auth: '/api/auth',
       admin: '/api/admin',
-      products: '/api/admin/products',
-      config: '/api/config'
+      adminProducts: '/api/admin/products',
+      config: '/api/config',
+      products: '/api/products'
     }
   });
 });

@@ -180,6 +180,27 @@ const processUploadedFiles = (req) => {
   return images;
 };
 
+// Helper function to safely parse JSON with number conversion
+const safeJSONParse = (jsonString, defaultValue = {}) => {
+  try {
+    const parsed = JSON.parse(jsonString);
+    
+    // Convert string numbers to actual numbers
+    if (parsed && typeof parsed === 'object') {
+      Object.keys(parsed).forEach(key => {
+        if (typeof parsed[key] === 'string' && !isNaN(parsed[key]) && parsed[key] !== '') {
+          parsed[key] = parseFloat(parsed[key]);
+        }
+      });
+    }
+    
+    return parsed;
+  } catch (e) {
+    console.log(`JSON parse error for: ${jsonString}`, e.message);
+    return defaultValue;
+  }
+};
+
 // @desc    Create new product
 // @route   POST /api/admin/products
 // @access  Private/Admin
@@ -230,12 +251,12 @@ const createProduct = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!name || !description || !category || !metal || !price) {
+    if (!name || !description || !category || !metal || !price || !purity) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields',
         errors: [
-          { field: 'required', message: 'Name, description, category, metal, and price are required' }
+          { field: 'required', message: 'Name, description, category, metal, purity, and price are required' }
         ]
       });
     }
@@ -243,37 +264,32 @@ const createProduct = async (req, res) => {
     // Process uploaded images
     const images = processUploadedFiles(req);
     
-    // Parse JSON fields safely
-    let parsedWeight, parsedStock, parsedDimensions, parsedFeatures, parsedTags;
-    
-    try {
-      parsedWeight = weight ? JSON.parse(weight) : { value: '', unit: 'grams' };
-    } catch (e) {
-      parsedWeight = { value: '', unit: 'grams' };
+    // Parse JSON fields safely with number conversion
+    let parsedWeight = { value: 0, unit: 'grams' };
+    if (weight) {
+      parsedWeight = safeJSONParse(weight, { value: 0, unit: 'grams' });
     }
     
-    try {
-      parsedStock = stock ? JSON.parse(stock) : { quantity: 0 };
-    } catch (e) {
+    let parsedStock = { quantity: 0 };
+    if (stock) {
+      parsedStock = safeJSONParse(stock, { quantity: 0 });
+    } else if (req.body['stock.quantity']) {
       parsedStock = { quantity: parseInt(req.body['stock.quantity']) || 0 };
     }
     
-    try {
-      parsedDimensions = dimensions ? JSON.parse(dimensions) : undefined;
-    } catch (e) {
-      parsedDimensions = undefined;
+    let parsedDimensions = undefined;
+    if (dimensions) {
+      parsedDimensions = safeJSONParse(dimensions, undefined);
     }
     
-    try {
-      parsedFeatures = features ? JSON.parse(features) : [];
-    } catch (e) {
-      parsedFeatures = [];
+    let parsedFeatures = [];
+    if (features) {
+      parsedFeatures = safeJSONParse(features, []);
     }
     
-    try {
-      parsedTags = tags ? JSON.parse(tags) : [];
-    } catch (e) {
-      parsedTags = [];
+    let parsedTags = [];
+    if (tags) {
+      parsedTags = safeJSONParse(tags, []);
     }
     
     // Create product
@@ -283,7 +299,7 @@ const createProduct = async (req, res) => {
       category,
       subcategory: subcategory || '',
       metal,
-      purity: purity || '',
+      purity,
       weight: parsedWeight,
       price: parseFloat(price),
       discountPrice: discountPrice ? parseFloat(discountPrice) : undefined,
@@ -299,7 +315,11 @@ const createProduct = async (req, res) => {
       createdBy: req.user._id
     };
 
-    console.log('Creating product with processed data:', productData);
+    console.log('Creating product with processed data:', {
+      ...productData,
+      weight: parsedWeight,
+      stock: parsedStock
+    });
     
     const product = await Product.create(productData);
     
@@ -428,45 +448,25 @@ const updateProduct = async (req, res) => {
     if (category) product.category = category;
     if (subcategory !== undefined) product.subcategory = subcategory;
     if (metal) product.metal = metal;
-    if (purity !== undefined) product.purity = purity;
+    if (purity) product.purity = purity;
     if (weight) {
-      try {
-        product.weight = JSON.parse(weight);
-      } catch (e) {
-        product.weight = { value: '', unit: 'grams' };
-      }
+      product.weight = safeJSONParse(weight, { value: 0, unit: 'grams' });
     }
     if (price) product.price = parseFloat(price);
     if (discountPrice !== undefined) {
       product.discountPrice = discountPrice ? parseFloat(discountPrice) : undefined;
     }
     if (stock) {
-      try {
-        product.stock = JSON.parse(stock);
-      } catch (e) {
-        product.stock = { quantity: 0 };
-      }
+      product.stock = safeJSONParse(stock, { quantity: 0 });
     }
     if (dimensions) {
-      try {
-        product.dimensions = JSON.parse(dimensions);
-      } catch (e) {
-        product.dimensions = undefined;
-      }
+      product.dimensions = safeJSONParse(dimensions, undefined);
     }
     if (features) {
-      try {
-        product.features = JSON.parse(features);
-      } catch (e) {
-        product.features = [];
-      }
+      product.features = safeJSONParse(features, []);
     }
     if (tags) {
-      try {
-        product.tags = JSON.parse(tags);
-      } catch (e) {
-        product.tags = [];
-      }
+      product.tags = safeJSONParse(tags, []);
     }
     if (isActive !== undefined) product.isActive = isActive === 'true' || isActive === true;
     if (isFeatured !== undefined) product.isFeatured = isFeatured === 'true' || isFeatured === true;

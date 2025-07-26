@@ -1,189 +1,262 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import CartIcon from './Cart/CartIcon';
 import ShoppingCart from './Cart/ShoppingCart';
+import axios from 'axios';
 
 const Collections = () => {
   const { addToCart } = useCart();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedMetal, setSelectedMetal] = useState('all');
   const [priceRange, setPriceRange] = useState('all');
+  const [sortBy, setSortBy] = useState('featured');
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState({});
+  
+  // Data states
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [metals, setMetals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [pagination, setPagination] = useState({});
+
+  // Fetch products based on filters
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      
+      const params = new URLSearchParams({
+        page: '1',
+        limit: '12'
+      });
+      
+      if (selectedCategory !== 'all') params.append('category', selectedCategory);
+      if (selectedMetal !== 'all') params.append('metal', selectedMetal);
+      
+      // Handle price range
+      if (priceRange !== 'all') {
+        const ranges = {
+          'under-25000': { max: 25000 },
+          '25000-50000': { min: 25000, max: 50000 },
+          '50000-100000': { min: 50000, max: 100000 },
+          'above-100000': { min: 100000 }
+        };
+        
+        if (ranges[priceRange]) {
+          if (ranges[priceRange].min) params.append('minPrice', ranges[priceRange].min);
+          if (ranges[priceRange].max) params.append('maxPrice', ranges[priceRange].max);
+        }
+      }
+      
+      // Handle sorting
+      const sortOptions = {
+        'featured': { sortBy: 'isFeatured', sortOrder: 'desc' },
+        'price-low': { sortBy: 'price', sortOrder: 'asc' },
+        'price-high': { sortBy: 'price', sortOrder: 'desc' },
+        'newest': { sortBy: 'createdAt', sortOrder: 'desc' },
+        'name': { sortBy: 'name', sortOrder: 'asc' }
+      };
+      
+      if (sortOptions[sortBy]) {
+        params.append('sortBy', sortOptions[sortBy].sortBy);
+        params.append('sortOrder', sortOptions[sortBy].sortOrder);
+      }
+      
+      const response = await axios.get(`http://localhost:4000/api/products?${params}`);
+      
+      if (response.data.success) {
+        setProducts(response.data.data.products);
+        setPagination(response.data.data.pagination);
+        
+        // Set categories and metals from stats
+        if (response.data.data.stats) {
+          setCategories(response.data.data.stats.categories);
+          setMetals(response.data.data.stats.metals);
+        }
+      }
+      
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch products when filters change
+  useEffect(() => {
+    fetchProducts();
+  }, [selectedCategory, selectedMetal, priceRange, sortBy]);
 
   const handleAddToCart = (product) => {
     addToCart(product);
-    setAddedToCart({ ...addedToCart, [product.id]: true });
+    setAddedToCart({ ...addedToCart, [product._id]: true });
     setTimeout(() => {
-      setAddedToCart({ ...addedToCart, [product.id]: false });
+      setAddedToCart({ ...addedToCart, [product._id]: false });
     }, 2000);
   };
 
-  const products = [
-    {
-      id: 1,
-      name: 'Royal Gold Necklace Set',
-      category: 'necklaces',
-      price: 85000,
-      originalPrice: 95000,
-      image: 'https://images.unsplash.com/photo-1599643478518-a784e5dc4c8f?w=400&h=400&fit=crop',
-      rating: 4.8,
-      reviews: 124,
-      description: 'Exquisite handcrafted gold necklace with traditional motifs'
-    },
-    {
-      id: 2,
-      name: 'Diamond Solitaire Ring',
-      category: 'rings',
-      price: 125000,
-      originalPrice: 140000,
-      image: 'https://images.unsplash.com/photo-1605100804763-247f67b3557e?w=400&h=400&fit=crop',
-      rating: 4.9,
-      reviews: 89,
-      description: 'Brilliant cut diamond solitaire in 18k white gold'
-    },
-    {
-      id: 3,
-      name: 'Pearl Drop Earrings',
-      category: 'earrings',
-      price: 35000,
-      originalPrice: 40000,
-      image: 'https://images.unsplash.com/photo-1535632066927-ab7c9ab60908?w=400&h=400&fit=crop',
-      rating: 4.7,
-      reviews: 156,
-      description: 'Elegant freshwater pearl earrings with gold accents'
-    },
-    {
-      id: 4,
-      name: 'Gold Tennis Bracelet',
-      category: 'bracelets',
-      price: 65000,
-      originalPrice: 75000,
-      image: 'https://images.unsplash.com/photo-1611591437281-460bfbe1220a?w=400&h=400&fit=crop',
-      rating: 4.6,
-      reviews: 78,
-      description: 'Classic tennis bracelet with premium gold links'
-    },
-    {
-      id: 5,
-      name: 'Bridal Jewelry Set',
-      category: 'sets',
-      price: 250000,
-      originalPrice: 280000,
-      image: 'https://images.unsplash.com/photo-1590736969955-71cc94901144?w=400&h=400&fit=crop',
-      rating: 5.0,
-      reviews: 45,
-      description: 'Complete bridal set with necklace, earrings, and maang tikka'
-    },
-    {
-      id: 6,
-      name: 'Traditional Bangles',
-      category: 'bracelets',
-      price: 45000,
-      originalPrice: 50000,
-      image: 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=400&h=400&fit=crop',
-      rating: 4.5,
-      reviews: 92,
-      description: 'Set of 6 traditional gold bangles with intricate designs'
-    }
-  ];
+  const formatPrice = (price) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: 0
+    }).format(price);
+  };
 
-  const categories = [
-    { id: 'all', name: 'All Products', count: products.length },
-    { id: 'necklaces', name: 'Necklaces', count: products.filter(p => p.category === 'necklaces').length },
-    { id: 'rings', name: 'Rings', count: products.filter(p => p.category === 'rings').length },
-    { id: 'earrings', name: 'Earrings', count: products.filter(p => p.category === 'earrings').length },
-    { id: 'bracelets', name: 'Bracelets', count: products.filter(p => p.category === 'bracelets').length },
-    { id: 'sets', name: 'Jewelry Sets', count: products.filter(p => p.category === 'sets').length }
-  ];
-
-  const filteredProducts = products.filter(product => {
-    const categoryMatch = selectedCategory === 'all' || product.category === selectedCategory;
-    let priceMatch = true;
-    
-    if (priceRange === 'under-50k') priceMatch = product.price < 50000;
-    else if (priceRange === '50k-100k') priceMatch = product.price >= 50000 && product.price < 100000;
-    else if (priceRange === '100k-200k') priceMatch = product.price >= 100000 && product.price < 200000;
-    else if (priceRange === 'above-200k') priceMatch = product.price >= 200000;
-    
-    return categoryMatch && priceMatch;
-  });
+  const clearFilters = () => {
+    setSelectedCategory('all');
+    setSelectedMetal('all');
+    setPriceRange('all');
+    setSortBy('featured');
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
+      {/* Navigation */}
+      <nav className="bg-white shadow-lg sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-6">
-            <Link to="/" className="text-2xl font-bold text-gold-600">Sri Vasavi Jewels</Link>
-            <div className="flex items-center space-x-4">
-              <CartIcon onClick={() => setIsCartOpen(true)} />
-              <nav className="flex space-x-8">
-                <Link to="/" className="text-gray-700 hover:text-gold-600">Home</Link>
-                <Link to="/collections" className="text-gold-600 font-medium">Collections</Link>
-                <Link to="/about" className="text-gray-700 hover:text-gold-600">About</Link>
-                <Link to="/contact" className="text-gray-700 hover:text-gold-600">Contact</Link>
-              </nav>
+          <div className="flex justify-between items-center h-16">
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-10 h-10 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-lg">💎</span>
+              </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-yellow-600 to-yellow-800 bg-clip-text text-transparent">
+                Sri Vasavi Jewels
+              </span>
+            </Link>
+            
+            <div className="hidden md:flex items-center space-x-8">
+              <Link to="/" className="text-gray-700 hover:text-yellow-600 font-medium transition-colors">
+                Home
+              </Link>
+              <Link to="/collections" className="text-yellow-600 font-medium">
+                Collections
+              </Link>
+              <Link to="/about" className="text-gray-700 hover:text-yellow-600 font-medium transition-colors">
+                About
+              </Link>
+              <Link to="/contact" className="text-gray-700 hover:text-yellow-600 font-medium transition-colors">
+                Contact
+              </Link>
             </div>
+            
+            <CartIcon onClick={() => setIsCartOpen(true)} />
           </div>
         </div>
-      </header>
+      </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="text-center mb-12">
+        {/* Header */}
+        <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Our Collections</h1>
-          <p className="text-lg text-gray-600">Discover our exquisite range of handcrafted jewelry</p>
+          <p className="text-gray-600 max-w-2xl mx-auto">
+            Discover our exquisite range of handcrafted jewelry pieces, each telling a unique story of elegance and craftsmanship.
+          </p>
         </div>
 
         <div className="flex flex-col lg:flex-row gap-8">
           {/* Filters Sidebar */}
           <div className="lg:w-1/4">
-            <div className="bg-white rounded-lg shadow-md p-6 sticky top-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Filters</h3>
-              
+            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-24">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Filters</h3>
+                <button
+                  onClick={clearFilters}
+                  className="text-sm text-yellow-600 hover:text-yellow-700 font-medium"
+                >
+                  Clear All
+                </button>
+              </div>
+
               {/* Category Filter */}
               <div className="mb-6">
-                <h4 className="text-md font-medium text-gray-700 mb-3">Categories</h4>
+                <h4 className="font-medium text-gray-900 mb-3">Category</h4>
                 <div className="space-y-2">
-                  {categories.map(category => (
-                    <button
-                      key={category.id}
-                      onClick={() => setSelectedCategory(category.id)}
-                      className={`w-full text-left px-3 py-2 rounded-md transition duration-200 ${
-                        selectedCategory === category.id
-                          ? 'bg-gold-100 text-gold-800 font-medium'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {category.name} ({category.count})
-                    </button>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="category"
+                      value="all"
+                      checked={selectedCategory === 'all'}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="text-yellow-600 focus:ring-yellow-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">All Categories</span>
+                  </label>
+                  {categories.map((category) => (
+                    <label key={category._id} className="flex items-center">
+                      <input
+                        type="radio"
+                        name="category"
+                        value={category._id}
+                        checked={selectedCategory === category._id}
+                        onChange={(e) => setSelectedCategory(e.target.value)}
+                        className="text-yellow-600 focus:ring-yellow-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">
+                        {category._id} ({category.count})
+                      </span>
+                    </label>
                   ))}
                 </div>
               </div>
 
-              {/* Price Filter */}
+              {/* Metal Filter */}
               <div className="mb-6">
-                <h4 className="text-md font-medium text-gray-700 mb-3">Price Range</h4>
+                <h4 className="font-medium text-gray-900 mb-3">Metal</h4>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="metal"
+                      value="all"
+                      checked={selectedMetal === 'all'}
+                      onChange={(e) => setSelectedMetal(e.target.value)}
+                      className="text-yellow-600 focus:ring-yellow-500"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">All Metals</span>
+                  </label>
+                  {metals.map((metal) => (
+                    <label key={metal._id} className="flex items-center">
+                      <input
+                        type="radio"
+                        name="metal"
+                        value={metal._id}
+                        checked={selectedMetal === metal._id}
+                        onChange={(e) => setSelectedMetal(e.target.value)}
+                        className="text-yellow-600 focus:ring-yellow-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">
+                        {metal._id} ({metal.count})
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Price Range Filter */}
+              <div className="mb-6">
+                <h4 className="font-medium text-gray-900 mb-3">Price Range</h4>
                 <div className="space-y-2">
                   {[
-                    { id: 'all', label: 'All Prices' },
-                    { id: 'under-50k', label: 'Under ₹50,000' },
-                    { id: '50k-100k', label: '₹50,000 - ₹1,00,000' },
-                    { id: '100k-200k', label: '₹1,00,000 - ₹2,00,000' },
-                    { id: 'above-200k', label: 'Above ₹2,00,000' }
-                  ].map(range => (
-                    <button
-                      key={range.id}
-                      onClick={() => setPriceRange(range.id)}
-                      className={`w-full text-left px-3 py-2 rounded-md transition duration-200 ${
-                        priceRange === range.id
-                          ? 'bg-gold-100 text-gold-800 font-medium'
-                          : 'text-gray-600 hover:bg-gray-100'
-                      }`}
-                    >
-                      {range.label}
-                    </button>
+                    { value: 'all', label: 'All Prices' },
+                    { value: 'under-25000', label: 'Under ₹25,000' },
+                    { value: '25000-50000', label: '₹25,000 - ₹50,000' },
+                    { value: '50000-100000', label: '₹50,000 - ₹1,00,000' },
+                    { value: 'above-100000', label: 'Above ₹1,00,000' }
+                  ].map((range) => (
+                    <label key={range.value} className="flex items-center">
+                      <input
+                        type="radio"
+                        name="priceRange"
+                        value={range.value}
+                        checked={priceRange === range.value}
+                        onChange={(e) => setPriceRange(e.target.value)}
+                        className="text-yellow-600 focus:ring-yellow-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">{range.label}</span>
+                    </label>
                   ))}
                 </div>
               </div>
@@ -192,83 +265,117 @@ const Collections = () => {
 
           {/* Products Grid */}
           <div className="lg:w-3/4">
-            <div className="flex justify-between items-center mb-6">
-              <p className="text-gray-600">
-                Showing {filteredProducts.length} of {products.length} products
+            {/* Sort and Results Info */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+              <p className="text-gray-600 mb-4 sm:mb-0">
+                {loading ? 'Loading...' : `Showing ${products.length} products`}
               </p>
-              <select className="border border-gray-300 rounded-md px-3 py-2 text-sm">
-                <option>Sort by: Featured</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
-                <option>Customer Rating</option>
-                <option>Newest First</option>
-              </select>
+              
+              <div className="flex items-center space-x-2">
+                <label className="text-sm text-gray-700">Sort by:</label>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-1 text-sm focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                >
+                  <option value="featured">Featured</option>
+                  <option value="newest">Newest First</option>
+                  <option value="price-low">Price: Low to High</option>
+                  <option value="price-high">Price: High to Low</option>
+                  <option value="name">Name: A to Z</option>
+                </select>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredProducts.map(product => (
-                <div key={product.id} className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition duration-300">
-                  <div className="relative">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-64 object-cover"
-                    />
-                    <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded-md text-sm font-medium">
-                      {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
-                    </div>
-                    <div className="absolute bottom-4 left-4 bg-white bg-opacity-90 px-2 py-1 rounded-md">
-                      <div className="flex items-center">
-                        <span className="text-yellow-400 text-sm">★</span>
-                        <span className="text-sm font-medium ml-1">{product.rating}</span>
-                        <span className="text-xs text-gray-500 ml-1">({product.reviews})</span>
-                      </div>
-                    </div>
+            {/* Products Grid */}
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[...Array(6)].map((_, index) => (
+                  <div key={index} className="bg-white rounded-lg shadow-lg p-6 animate-pulse">
+                    <div className="bg-gray-200 h-48 rounded-lg mb-4"></div>
+                    <div className="bg-gray-200 h-4 rounded mb-2"></div>
+                    <div className="bg-gray-200 h-4 rounded w-2/3 mb-4"></div>
+                    <div className="bg-gray-200 h-8 rounded"></div>
                   </div>
-                  
-                  <div className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.name}</h3>
-                    <p className="text-gray-600 text-sm mb-3">{product.description}</p>
-                    
-                    <div className="flex items-center justify-between mb-4">
-                      <div>
-                        <span className="text-2xl font-bold text-gold-600">₹{product.price.toLocaleString()}</span>
-                        <span className="text-sm text-gray-500 line-through ml-2">₹{product.originalPrice.toLocaleString()}</span>
-                      </div>
+                ))}
+              </div>
+            ) : products.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {products.map((product) => (
+                  <div key={product._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                    <div className="relative">
+                      <img
+                        src={product.images?.[0]?.url || 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop'}
+                        alt={product.name}
+                        className="w-full h-48 object-cover"
+                      />
+                      {product.discountPrice && (
+                        <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-sm font-semibold">
+                          {product.discountPercentage}% OFF
+                        </div>
+                      )}
+                      {product.isFeatured && (
+                        <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-sm font-semibold">
+                          Featured
+                        </div>
+                      )}
                     </div>
-                    
-                    <div className="flex space-x-2">
-                      <Link
-                        to={`/product/${product.id}`}
-                        className="flex-1 bg-gold-600 hover:bg-gold-700 text-white py-2 px-4 rounded-md text-sm font-medium transition duration-300 text-center"
-                      >
-                        View Details
-                      </Link>
+                    <div className="p-6">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm text-gray-500">{product.category}</span>
+                        <span className="text-sm text-gray-500">{product.metal}</span>
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.name}</h3>
+                      <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
+                      
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xl font-bold text-gray-900">
+                            {formatPrice(product.finalPrice)}
+                          </span>
+                          {product.discountPrice && (
+                            <span className="text-sm text-gray-500 line-through">
+                              {formatPrice(product.price)}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          Stock: {product.stock.quantity}
+                        </div>
+                      </div>
+                      
                       <button
                         onClick={() => handleAddToCart(product)}
-                        className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition duration-300 ${
-                          addedToCart[product.id]
+                        disabled={addedToCart[product._id] || product.stock.quantity === 0}
+                        className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
+                          product.stock.quantity === 0
+                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                            : addedToCart[product._id]
                             ? 'bg-green-500 text-white'
-                            : 'border border-gold-600 text-gold-600 hover:bg-gold-600 hover:text-white'
+                            : 'bg-yellow-600 text-white hover:bg-yellow-700'
                         }`}
                       >
-                        {addedToCart[product.id] ? '✓ Added' : 'Add to Cart'}
+                        {product.stock.quantity === 0
+                          ? 'Out of Stock'
+                          : addedToCart[product._id]
+                          ? 'Added to Cart!'
+                          : 'Add to Cart'
+                        }
                       </button>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredProducts.length === 0 && (
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No products found matching your criteria.</p>
+                <div className="text-gray-400 text-6xl mb-4">🔍</div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No products found</h3>
+                <p className="text-gray-600 mb-4">
+                  Try adjusting your filters or search criteria.
+                </p>
                 <button
-                  onClick={() => {
-                    setSelectedCategory('all');
-                    setPriceRange('all');
-                  }}
-                  className="mt-4 bg-gold-600 hover:bg-gold-700 text-white px-6 py-2 rounded-md transition duration-300"
+                  onClick={clearFilters}
+                  className="bg-yellow-600 text-white px-6 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
                 >
                   Clear Filters
                 </button>
@@ -279,7 +386,10 @@ const Collections = () => {
       </div>
 
       {/* Shopping Cart */}
-      <ShoppingCart isOpen={isCartOpen} onClose={() => setIsCartOpen(false)} />
+      <ShoppingCart 
+        isOpen={isCartOpen} 
+        onClose={() => setIsCartOpen(false)} 
+      />
     </div>
   );
 };

@@ -50,8 +50,12 @@ const validateCreateProduct = [
       if (value) {
         try {
           const weight = JSON.parse(value);
-          if (weight.value && (typeof weight.value !== 'number' || weight.value < 0)) {
-            throw new Error('Weight value must be a positive number');
+          // Convert string numbers to actual numbers
+          if (weight.value) {
+            const numValue = parseFloat(weight.value);
+            if (isNaN(numValue) || numValue < 0) {
+              throw new Error('Weight value must be a positive number');
+            }
           }
           if (weight.unit && !['grams', 'carats'].includes(weight.unit)) {
             throw new Error('Weight unit must be either grams or carats');
@@ -72,8 +76,12 @@ const validateCreateProduct = [
       if (value) {
         try {
           const stock = JSON.parse(value);
-          if (typeof stock.quantity !== 'number' || stock.quantity < 0) {
-            throw new Error('Stock quantity must be a non-negative number');
+          // Convert string numbers to actual numbers
+          if (stock.quantity !== undefined) {
+            const numQuantity = parseInt(stock.quantity);
+            if (isNaN(numQuantity) || numQuantity < 0) {
+              throw new Error('Stock quantity must be a non-negative number');
+            }
           }
         } catch (error) {
           if (error.message.includes('Stock')) {
@@ -135,14 +143,14 @@ const validateCreateProduct = [
       if (value) {
         try {
           const dimensions = JSON.parse(value);
-          if (dimensions.length && typeof dimensions.length !== 'number') {
-            throw new Error('Length must be a number');
+          if (dimensions.length && (isNaN(parseFloat(dimensions.length)) || parseFloat(dimensions.length) < 0)) {
+            throw new Error('Length must be a positive number');
           }
-          if (dimensions.width && typeof dimensions.width !== 'number') {
-            throw new Error('Width must be a number');
+          if (dimensions.width && (isNaN(parseFloat(dimensions.width)) || parseFloat(dimensions.width) < 0)) {
+            throw new Error('Width must be a positive number');
           }
-          if (dimensions.height && typeof dimensions.height !== 'number') {
-            throw new Error('Height must be a number');
+          if (dimensions.height && (isNaN(parseFloat(dimensions.height)) || parseFloat(dimensions.height) < 0)) {
+            throw new Error('Height must be a positive number');
           }
           if (dimensions.unit && !['mm', 'cm', 'inches'].includes(dimensions.unit)) {
             throw new Error('Dimension unit must be mm, cm, or inches');
@@ -170,7 +178,7 @@ const validateCreateProduct = [
     .withMessage('SEO description must not exceed 160 characters')
 ];
 
-// Validation rules for updating a product (similar to create but all fields optional except those that should remain required)
+// Validation rules for updating a product
 const validateUpdateProduct = [
   body('name')
     .optional()
@@ -222,8 +230,11 @@ const validateUpdateProduct = [
       if (value) {
         try {
           const weight = JSON.parse(value);
-          if (weight.value && (typeof weight.value !== 'number' || weight.value < 0)) {
-            throw new Error('Weight value must be a positive number');
+          if (weight.value) {
+            const numValue = parseFloat(weight.value);
+            if (isNaN(numValue) || numValue < 0) {
+              throw new Error('Weight value must be a positive number');
+            }
           }
           if (weight.unit && !['grams', 'carats'].includes(weight.unit)) {
             throw new Error('Weight unit must be either grams or carats');
@@ -244,8 +255,11 @@ const validateUpdateProduct = [
       if (value) {
         try {
           const stock = JSON.parse(value);
-          if (typeof stock.quantity !== 'number' || stock.quantity < 0) {
-            throw new Error('Stock quantity must be a non-negative number');
+          if (stock.quantity !== undefined) {
+            const numQuantity = parseInt(stock.quantity);
+            if (isNaN(numQuantity) || numQuantity < 0) {
+              throw new Error('Stock quantity must be a non-negative number');
+            }
           }
         } catch (error) {
           if (error.message.includes('Stock')) {
