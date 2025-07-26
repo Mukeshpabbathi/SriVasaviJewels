@@ -16,3 +16,6 @@
 📍 Database: srivasavijewels
 🌐 Host: ac-rdtiow9-shard-00-02.dotgmvu.mongodb.net:27017
 2025-07-26T21:23:06.990Z - GET /api/health
+📴 SIGINT received, shutting down gracefully
+📴 Mongoose disconnected from MongoDB
+📴 MongoDB connection closed due to app termination

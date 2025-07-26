@@ -1,0 +1,32 @@
+
+> server@2.0.0 start
+> node index.js
+
+
+🚀 ===================================
+🏪 Sri Vasavi Jewels Server Started
+📍 Port: 4000
+🌐 URL: http://localhost:4000
+💾 Database: ❌ Disconnected
+🔧 Environment: development
+🚀 ===================================
+
+🔗 Mongoose connected to MongoDB
+✅ MongoDB connected successfully
+📍 Database: srivasavijewels
+🌐 Host: ac-rdtiow9-shard-00-00.dotgmvu.mongodb.net:27017
+2025-07-26T21:27:28.588Z - GET /api/health
+2025-07-26T21:27:58.376Z - POST /api/auth/login
+Login attempt: { email: 'admin@srivasavijewels.com' }
+✅ Login successful: admin@srivasavijewels.com (admin)
+2025-07-26T21:29:09.228Z - POST /api/auth/login
+Login attempt: { email: 'admin@srivasavijewels.com' }
+✅ Login successful: admin@srivasavijewels.com (admin)
+2025-07-26T21:30:16.865Z - POST /api/auth/login
+Login attempt: { email: 'admin@srivasavijewels.com' }
+✅ Login successful: admin@srivasavijewels.com (admin)
+2025-07-26T21:30:17.311Z - GET /api/admin/stats
+2025-07-26T21:30:18.229Z - GET /api/admin/stats
+2025-07-26T21:30:43.369Z - POST /api/auth/login
+Login attempt: { email: 'admin@srivasavijewels.com' }
+✅ Login successful: admin@srivasavijewels.com (admin)

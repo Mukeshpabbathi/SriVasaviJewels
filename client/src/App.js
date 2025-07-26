@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import Login from './components/Auth/Login';
 import Signup from './components/Auth/Signup';
@@ -20,29 +20,48 @@ function App() {
     const userData = localStorage.getItem('user');
     
     if (token && userData) {
-      setUser(JSON.parse(userData));
+      try {
+        const parsedUser = JSON.parse(userData);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
     }
     setLoading(false);
   }, []);
 
   const handleLogin = (userData) => {
     setUser(userData);
+    // Auto-redirect admin users to dashboard
+    if (userData.role === 'admin') {
+      window.location.href = '/admin';
+    }
   };
 
   const handleSignup = (userData) => {
     setUser(userData);
+    // Auto-redirect admin users to dashboard
+    if (userData.role === 'admin') {
+      window.location.href = '/admin';
+    }
   };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);
+    window.location.href = '/';
   };
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-xl text-gray-600">Loading...</div>
+        <div className="flex items-center space-x-2">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-600"></div>
+          <div className="text-xl text-gray-600">Loading...</div>
+        </div>
       </div>
     );
   }
@@ -75,13 +94,21 @@ function App() {
             <Route 
               path="/login" 
               element={
-                user ? <Navigate to="/" /> : <Login onLogin={handleLogin} />
+                user ? (
+                  user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/" />
+                ) : (
+                  <Login onLogin={handleLogin} />
+                )
               } 
             />
             <Route 
               path="/signup" 
               element={
-                user ? <Navigate to="/" /> : <Signup onSignup={handleSignup} />
+                user ? (
+                  user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/" />
+                ) : (
+                  <Signup onSignup={handleSignup} />
+                )
               } 
             />
             <Route 
@@ -89,7 +116,7 @@ function App() {
               element={
                 user && user.role === 'admin' 
                   ? <AdminDashboard user={user} onLogout={handleLogout} />
-                  : <Navigate to="/" />
+                  : <Navigate to="/login" />
               } 
             />
           </Routes>
