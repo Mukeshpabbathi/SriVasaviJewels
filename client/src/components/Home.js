@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import CartIcon from './Cart/CartIcon';
 import ShoppingCart from './Cart/ShoppingCart';
+import ResponsiveImage from './common/ResponsiveImage';
 import axios from 'axios';
 
 const Home = ({ user, onLogout }) => {
@@ -185,11 +186,14 @@ const Home = ({ user, onLogout }) => {
               {categories.map((category) => (
                 <div key={category._id} className="group cursor-pointer">
                   <div className="relative overflow-hidden rounded-lg shadow-lg transition-transform group-hover:scale-105">
-                    <img
-                      src={category.sampleProduct.images?.[0]?.url || 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop'}
-                      alt={category._id}
-                      className="w-full h-64 object-cover"
-                    />
+                    <div className="w-full h-64">
+                      <ResponsiveImage
+                        image={category.sampleProduct.images?.[0]}
+                        alt={category._id}
+                        size="medium"
+                        className="w-full h-full"
+                      />
+                    </div>
                     <div className="absolute inset-0 bg-black bg-opacity-40 flex items-end">
                       <div className="p-6 text-white">
                         <h3 className="text-xl font-bold mb-2">{category._id}</h3>
@@ -246,11 +250,14 @@ const Home = ({ user, onLogout }) => {
               {featuredProducts.map((product) => (
                 <div key={product._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                   <div className="relative">
-                    <img
-                      src={product.images?.[0]?.url || 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=400&h=300&fit=crop'}
-                      alt={product.name}
-                      className="w-full h-48 object-cover"
-                    />
+                    <div className="w-full h-48">
+                      <ResponsiveImage
+                        image={product.images?.[0]}
+                        alt={product.name}
+                        size="medium"
+                        className="w-full h-full"
+                      />
+                    </div>
                     {product.discountPrice && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-sm font-semibold">
                         {product.discountPercentage}% OFF

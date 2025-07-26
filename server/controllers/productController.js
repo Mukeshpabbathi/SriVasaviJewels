@@ -1,5 +1,5 @@
 const Product = require('../models/Product');
-const { deleteImage, getImageUrl, hasCloudinaryCredentials } = require('../config/cloudinary');
+const { deleteImage, processUploadedImages, getImageUrl, hasCloudinaryCredentials } = require('../config/cloudinary');
 const { validationResult } = require('express-validator');
 const path = require('path');
 const fs = require('fs');
@@ -146,34 +146,45 @@ const getProductById = async (req, res) => {
   }
 };
 
-// Helper function to process uploaded files
-const processUploadedFiles = (req) => {
+// Helper function to process uploaded files with image processing
+const processUploadedFiles = async (req) => {
   let images = [];
   
   if (req.files) {
-    // Handle primary image
-    if (req.files.primaryImage && req.files.primaryImage[0]) {
-      const file = req.files.primaryImage[0];
-      const imageUrl = hasCloudinaryCredentials ? file.path : `/uploads/products/${file.filename}`;
-      
-      images.push({
-        url: imageUrl,
-        alt: `${req.body.name || 'Product'} - Primary Image`,
-        isPrimary: true
-      });
-    }
-    
-    // Handle gallery images
-    if (req.files.galleryImages) {
-      req.files.galleryImages.forEach((file, index) => {
-        const imageUrl = hasCloudinaryCredentials ? file.path : `/uploads/products/${file.filename}`;
+    try {
+      // Handle primary image
+      if (req.files.primaryImage && req.files.primaryImage.length > 0) {
+        console.log('Processing primary image...');
+        const processedPrimary = await processUploadedImages(req.files.primaryImage, 'primary');
         
-        images.push({
-          url: imageUrl,
-          alt: `${req.body.name || 'Product'} - Gallery Image ${index + 1}`,
-          isPrimary: false
+        if (processedPrimary.length > 0) {
+          images.push({
+            ...processedPrimary[0],
+            isPrimary: true,
+            alt: `${req.body.name || 'Product'} - Primary Image`
+          });
+        }
+      }
+      
+      // Handle gallery images
+      if (req.files.galleryImages && req.files.galleryImages.length > 0) {
+        console.log(`Processing ${req.files.galleryImages.length} gallery images...`);
+        const processedGallery = await processUploadedImages(req.files.galleryImages, 'gallery');
+        
+        processedGallery.forEach((processedImage, index) => {
+          images.push({
+            ...processedImage,
+            isPrimary: false,
+            alt: `${req.body.name || 'Product'} - Gallery Image ${index + 1}`
+          });
         });
-      });
+      }
+      
+      console.log(`Successfully processed ${images.length} images`);
+      
+    } catch (error) {
+      console.error('Error processing uploaded files:', error);
+      throw new Error(`Image processing failed: ${error.message}`);
     }
   }
   
@@ -261,8 +272,18 @@ const createProduct = async (req, res) => {
       });
     }
     
-    // Process uploaded images
-    const images = processUploadedFiles(req);
+    // Process uploaded images with automatic format conversion
+    let images = [];
+    try {
+      images = await processUploadedFiles(req);
+      console.log(`Processed ${images.length} images for product`);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image processing failed',
+        errors: [{ field: 'images', message: error.message }]
+      });
+    }
     
     // Parse JSON fields safely with number conversion
     let parsedWeight = { value: 0, unit: 'grams' };
@@ -317,6 +338,7 @@ const createProduct = async (req, res) => {
 
     console.log('Creating product with processed data:', {
       ...productData,
+      images: images.map(img => ({ url: img.url, isPrimary: img.isPrimary })),
       weight: parsedWeight,
       stock: parsedStock
     });
@@ -327,7 +349,7 @@ const createProduct = async (req, res) => {
     
     res.status(201).json({
       success: true,
-      message: 'Product created successfully',
+      message: 'Product created successfully with optimized images',
       data: product
     });
     
@@ -409,15 +431,7 @@ const updateProduct = async (req, res) => {
       const imagesToRemove = JSON.parse(removeImages);
       for (const imageUrl of imagesToRemove) {
         try {
-          if (hasCloudinaryCredentials) {
-            // Extract public_id from Cloudinary URL for deletion
-            const publicId = imageUrl.split('/').pop().split('.')[0];
-            await deleteImage(publicId);
-          } else {
-            // For local storage, extract filename from URL
-            const filename = imageUrl.split('/').pop();
-            await deleteImage(filename);
-          }
+          await deleteImage(imageUrl);
         } catch (error) {
           console.error('Error deleting image:', error);
         }
@@ -430,7 +444,17 @@ const updateProduct = async (req, res) => {
     }
     
     // Process new uploaded images
-    const newImages = processUploadedFiles(req);
+    let newImages = [];
+    try {
+      newImages = await processUploadedFiles(req);
+      console.log(`Processed ${newImages.length} new images for product update`);
+    } catch (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'Image processing failed',
+        errors: [{ field: 'images', message: error.message }]
+      });
+    }
     
     // Add new images to existing ones
     if (newImages.length > 0) {
@@ -480,7 +504,7 @@ const updateProduct = async (req, res) => {
     
     res.json({
       success: true,
-      message: 'Product updated successfully',
+      message: 'Product updated successfully with optimized images',
       data: product
     });
     
@@ -525,13 +549,7 @@ const deleteProduct = async (req, res) => {
     // Delete all associated images
     for (const image of product.images) {
       try {
-        if (hasCloudinaryCredentials) {
-          const publicId = image.url.split('/').pop().split('.')[0];
-          await deleteImage(publicId);
-        } else {
-          const filename = image.url.split('/').pop();
-          await deleteImage(filename);
-        }
+        await deleteImage(image.url);
       } catch (error) {
         console.error('Error deleting image:', error);
       }
@@ -578,13 +596,7 @@ const bulkOperations = async (req, res) => {
         for (const product of productsToDelete) {
           for (const image of product.images) {
             try {
-              if (hasCloudinaryCredentials) {
-                const publicId = image.url.split('/').pop().split('.')[0];
-                await deleteImage(publicId);
-              } else {
-                const filename = image.url.split('/').pop();
-                await deleteImage(filename);
-              }
+              await deleteImage(image.url);
             } catch (error) {
               console.error('Error deleting image:', error);
             }

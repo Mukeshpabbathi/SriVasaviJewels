@@ -3,6 +3,7 @@ const { CloudinaryStorage } = require('multer-storage-cloudinary');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const imageProcessor = require('../utils/imageProcessor');
 
 // Check if Cloudinary credentials are provided
 const hasCloudinaryCredentials = 
@@ -27,7 +28,7 @@ if (hasCloudinaryCredentials) {
     cloudinary: cloudinary,
     params: {
       folder: 'srivasavijewels/products',
-      allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+      allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'avif', 'tiff', 'bmp', 'gif'],
       transformation: [
         { width: 800, height: 800, crop: 'limit', quality: 'auto' },
         { format: 'webp' }
@@ -37,35 +38,22 @@ if (hasCloudinaryCredentials) {
   
   console.log('✅ Cloudinary storage configured');
 } else {
-  console.log('ℹ️ Using local file storage (Cloudinary credentials not provided)');
+  console.log('ℹ️ Using local file storage with image processing (Cloudinary credentials not provided)');
 }
 
-// Configure local storage
-const localStorage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadPath = path.join(__dirname, '../uploads/products/');
-    
-    // Create directory if it doesn't exist
-    if (!fs.existsSync(uploadPath)) {
-      fs.mkdirSync(uploadPath, { recursive: true });
-    }
-    
-    cb(null, uploadPath);
-  },
-  filename: function (req, file, cb) {
-    // Generate unique filename
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname);
-    const filename = file.fieldname + '-' + uniqueSuffix + extension;
-    cb(null, filename);
-  }
-});
+// Configure local storage with image processing
+const localStorage = multer.memoryStorage(); // Store in memory for processing
 
-// File filter function
+// File filter function - now accepts all image formats
 const fileFilter = (req, file, cb) => {
-  // Check file type
+  // Check if it's an image file
   if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
+    // Check if it's a supported format
+    if (imageProcessor.isSupportedFormat(file.originalname)) {
+      cb(null, true);
+    } else {
+      cb(new Error(`Unsupported image format: ${path.extname(file.originalname)}. Supported formats: ${imageProcessor.supportedFormats.join(', ')}`), false);
+    }
   } else {
     cb(new Error('Only image files are allowed!'), false);
   }
@@ -77,7 +65,7 @@ const createUpload = (useCloudinary = hasCloudinaryCredentials) => {
     storage: useCloudinary && cloudinaryStorage ? cloudinaryStorage : localStorage,
     fileFilter: fileFilter,
     limits: {
-      fileSize: 5 * 1024 * 1024, // 5MB limit
+      fileSize: 10 * 1024 * 1024, // 10MB limit (larger since we'll compress)
       files: 10 // Maximum 10 files
     }
   });
@@ -95,24 +83,81 @@ const uploadFields = createUpload().fields([
   { name: 'galleryImages', maxCount: 9 }
 ]);
 
-// Helper function to delete image from Cloudinary
-const deleteImage = async (publicId) => {
-  if (!hasCloudinaryCredentials) {
-    // For local storage, delete file from filesystem
+// Process uploaded images
+const processUploadedImages = async (files, fieldName = 'images') => {
+  if (!files || files.length === 0) return [];
+
+  const processedImages = [];
+  const outputDir = path.join(__dirname, '../uploads/products');
+
+  for (const file of files) {
     try {
-      const filePath = path.join(__dirname, '../uploads/products/', publicId);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+      console.log(`Processing ${file.originalname} (${file.mimetype}, ${file.size} bytes)`);
+
+      // Process the image
+      const result = await imageProcessor.processImage(
+        file.buffer,
+        file.originalname,
+        outputDir
+      );
+
+      if (result.success) {
+        // Generate image metadata for database
+        const imageMetadata = imageProcessor.generateImageMetadata(
+          result.processedImages,
+          file.originalname,
+          `${fieldName} - ${file.originalname}`
+        );
+
+        processedImages.push(imageMetadata);
+        console.log(`✅ Successfully processed: ${file.originalname}`);
+      }
+
+    } catch (error) {
+      console.error(`❌ Failed to process ${file.originalname}:`, error.message);
+      throw new Error(`Image processing failed for ${file.originalname}: ${error.message}`);
+    }
+  }
+
+  return processedImages;
+};
+
+// Helper function to delete image from Cloudinary or local storage
+const deleteImage = async (imageUrl) => {
+  if (!hasCloudinaryCredentials) {
+    // For local storage, delete all related files
+    try {
+      if (typeof imageUrl === 'string' && imageUrl.includes('/uploads/products/')) {
+        const filename = path.basename(imageUrl);
+        const baseFilename = filename.split('-').slice(0, -2).join('-'); // Remove timestamp and random
+        
+        // Find all related files (different sizes and formats)
+        const uploadsDir = path.join(__dirname, '../uploads/products');
+        const files = await fs.promises.readdir(uploadsDir);
+        
+        const relatedFiles = files.filter(file => 
+          file.includes(baseFilename) || file === filename
+        );
+        
+        for (const file of relatedFiles) {
+          const filePath = path.join(uploadsDir, file);
+          try {
+            await fs.promises.unlink(filePath);
+            console.log(`Deleted: ${file}`);
+          } catch (error) {
+            console.error(`Error deleting ${file}:`, error.message);
+          }
+        }
       }
       return { result: 'ok' };
     } catch (error) {
-      console.error('Error deleting local file:', error);
+      console.error('Error deleting local files:', error);
       throw error;
     }
   }
   
   try {
-    const result = await cloudinary.uploader.destroy(publicId);
+    const result = await cloudinary.uploader.destroy(imageUrl);
     return result;
   } catch (error) {
     console.error('Error deleting image from Cloudinary:', error);
@@ -121,23 +166,20 @@ const deleteImage = async (publicId) => {
 };
 
 // Helper function to get optimized image URL
-const getOptimizedImageUrl = (publicId, options = {}) => {
-  if (!hasCloudinaryCredentials) {
-    // For local storage, return the local URL
-    return `/uploads/products/${publicId}`;
+const getOptimizedImageUrl = (imageMetadata, size = 'medium', preferWebP = true) => {
+  if (!imageMetadata) return null;
+  
+  // If it's old format (just URL string)
+  if (typeof imageMetadata === 'string') {
+    return imageMetadata;
   }
   
-  const defaultOptions = {
-    width: 400,
-    height: 400,
-    crop: 'fill',
-    quality: 'auto',
-    format: 'webp'
-  };
+  // If it's new format with responsive images
+  if (imageMetadata.responsive) {
+    return imageMetadata.responsive[size] || imageMetadata.url;
+  }
   
-  const finalOptions = { ...defaultOptions, ...options };
-  
-  return cloudinary.url(publicId, finalOptions);
+  return imageMetadata.url || null;
 };
 
 // Helper function to get image URL (works for both local and Cloudinary)
@@ -157,14 +199,32 @@ const getImageUrl = (imagePath) => {
   return imagePath;
 };
 
+// Generate responsive image HTML
+const generateResponsiveImageHTML = (imageMetadata, alt = '', className = '') => {
+  if (!imageMetadata || !imageMetadata.responsive) {
+    const url = getImageUrl(imageMetadata);
+    return `<img src="${url}" alt="${alt}" class="${className}" />`;
+  }
+
+  return `
+    <picture>
+      <source srcset="${imageMetadata.srcSet}" sizes="${imageMetadata.sizes}" type="image/webp">
+      <img src="${imageMetadata.fallbackUrl}" alt="${alt}" class="${className}" />
+    </picture>
+  `;
+};
+
 module.exports = {
   cloudinary: hasCloudinaryCredentials ? cloudinary : null,
   uploadSingle,
   uploadMultiple,
   uploadFields,
+  processUploadedImages,
   deleteImage,
   getOptimizedImageUrl,
   getImageUrl,
+  generateResponsiveImageHTML,
   createUpload,
-  hasCloudinaryCredentials
+  hasCloudinaryCredentials,
+  imageProcessor
 };
