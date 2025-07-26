@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import CartIcon from './Cart/CartIcon';
 import ShoppingCart from './Cart/ShoppingCart';
+import WishlistIcon from './Wishlist/WishlistIcon';
+import AddToWishlistButton from './Wishlist/AddToWishlistButton';
 import ResponsiveImage from './common/ResponsiveImage';
 import AdvancedSearch from './common/AdvancedSearch';
 import axios from 'axios';
 
 const Collections = () => {
   const { addToCart } = useCart();
+  const { getWishlistCount } = useWishlist();
   const [searchParams, setSearchParams] = useSearchParams();
   
   // Filter states
@@ -207,6 +211,11 @@ const Collections = () => {
                 </svg>
               </button>
               
+              {/* Wishlist Icon */}
+              <Link to="/wishlist">
+                <WishlistIcon />
+              </Link>
+              
               <CartIcon onClick={() => setIsCartOpen(true)} />
             </div>
           </div>
@@ -324,41 +333,6 @@ const Collections = () => {
                 </div>
               </div>
 
-              {/* Purity Filter */}
-              {facets.purities && facets.purities.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="font-medium text-gray-900 mb-3">Purity</h4>
-                  <div className="space-y-2">
-                    <label className="flex items-center">
-                      <input
-                        type="radio"
-                        name="purity"
-                        value="all"
-                        checked={selectedPurity === 'all'}
-                        onChange={(e) => setSelectedPurity(e.target.value)}
-                        className="text-yellow-600 focus:ring-yellow-500"
-                      />
-                      <span className="ml-2 text-sm text-gray-700">All Purities</span>
-                    </label>
-                    {facets.purities.map((purity) => (
-                      <label key={purity._id} className="flex items-center">
-                        <input
-                          type="radio"
-                          name="purity"
-                          value={purity._id}
-                          checked={selectedPurity === purity._id}
-                          onChange={(e) => setSelectedPurity(e.target.value)}
-                          className="text-yellow-600 focus:ring-yellow-500"
-                        />
-                        <span className="ml-2 text-sm text-gray-700">
-                          {purity._id} ({purity.count})
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-
               {/* Price Range Filter */}
               <div className="mb-6">
                 <h4 className="font-medium text-gray-900 mb-3">Price Range</h4>
@@ -385,28 +359,6 @@ const Collections = () => {
                   ))}
                 </div>
               </div>
-
-              {/* Tags Filter */}
-              {facets.tags && facets.tags.length > 0 && (
-                <div className="mb-6">
-                  <h4 className="font-medium text-gray-900 mb-3">Tags</h4>
-                  <div className="flex flex-wrap gap-2">
-                    {facets.tags.map((tag) => (
-                      <button
-                        key={tag._id}
-                        onClick={() => toggleTag(tag._id)}
-                        className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                          selectedTags.includes(tag._id)
-                            ? 'bg-yellow-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        }`}
-                      >
-                        {tag._id} ({tag.count})
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -434,63 +386,6 @@ const Collections = () => {
               </div>
             </div>
 
-            {/* Active Filters Display */}
-            {getActiveFiltersCount() > 0 && (
-              <div className="mb-6 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm font-medium text-yellow-800">Active filters:</span>
-                  
-                  {searchQuery && (
-                    <span className="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                      Search: "{searchQuery}"
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="ml-2 text-yellow-600 hover:text-yellow-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  
-                  {selectedCategory !== 'all' && (
-                    <span className="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                      Category: {selectedCategory}
-                      <button
-                        onClick={() => setSelectedCategory('all')}
-                        className="ml-2 text-yellow-600 hover:text-yellow-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  
-                  {selectedMetal !== 'all' && (
-                    <span className="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                      Metal: {selectedMetal}
-                      <button
-                        onClick={() => setSelectedMetal('all')}
-                        className="ml-2 text-yellow-600 hover:text-yellow-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                  
-                  {selectedTags.map(tag => (
-                    <span key={tag} className="inline-flex items-center px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                      Tag: {tag}
-                      <button
-                        onClick={() => toggleTag(tag)}
-                        className="ml-2 text-yellow-600 hover:text-yellow-800"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Products Grid */}
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -516,13 +411,23 @@ const Collections = () => {
                           className="w-full h-full"
                         />
                       </div>
+                      
+                      {/* Wishlist Button */}
+                      <div className="absolute top-2 right-2">
+                        <AddToWishlistButton 
+                          product={product} 
+                          variant="icon" 
+                          size="medium"
+                        />
+                      </div>
+                      
                       {product.discountPrice && (
                         <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-sm font-semibold">
                           {product.discountPercentage}% OFF
                         </div>
                       )}
                       {product.isFeatured && (
-                        <div className="absolute top-2 right-2 bg-yellow-500 text-white px-2 py-1 rounded text-sm font-semibold">
+                        <div className="absolute top-2 left-2 bg-yellow-500 text-white px-2 py-1 rounded text-sm font-semibold">
                           Featured
                         </div>
                       )}
@@ -534,22 +439,6 @@ const Collections = () => {
                       </div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.name}</h3>
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
-                      
-                      {/* Tags */}
-                      {product.tags && product.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {product.tags.slice(0, 3).map(tag => (
-                            <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                              {tag}
-                            </span>
-                          ))}
-                          {product.tags.length > 3 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-xs">
-                              +{product.tags.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
                       
                       <div className="flex items-center justify-between mb-4">
                         <div className="flex items-center space-x-2">

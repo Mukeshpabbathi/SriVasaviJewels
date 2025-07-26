@@ -1,13 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import CartIcon from './Cart/CartIcon';
 import ShoppingCart from './Cart/ShoppingCart';
+import WishlistIcon from './Wishlist/WishlistIcon';
+import AddToWishlistButton from './Wishlist/AddToWishlistButton';
 import ResponsiveImage from './common/ResponsiveImage';
 import axios from 'axios';
 
 const Home = ({ user, onLogout }) => {
   const { addToCart } = useCart();
+  const { getWishlistCount } = useWishlist();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [addedToCart, setAddedToCart] = useState({});
   const [featuredProducts, setFeaturedProducts] = useState([]);
@@ -95,6 +99,11 @@ const Home = ({ user, onLogout }) => {
             </div>
             
             <div className="flex items-center space-x-4">
+              {/* Wishlist Icon */}
+              <Link to="/wishlist">
+                <WishlistIcon />
+              </Link>
+              
               <CartIcon onClick={() => setIsCartOpen(true)} />
               
               {user ? (
@@ -184,7 +193,11 @@ const Home = ({ user, onLogout }) => {
           ) : categories.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
               {categories.map((category) => (
-                <div key={category._id} className="group cursor-pointer">
+                <Link 
+                  key={category._id} 
+                  to={`/collections?category=${encodeURIComponent(category._id)}`}
+                  className="group cursor-pointer"
+                >
                   <div className="relative overflow-hidden rounded-lg shadow-lg transition-transform group-hover:scale-105">
                     <div className="w-full h-64">
                       <ResponsiveImage
@@ -206,7 +219,7 @@ const Home = ({ user, onLogout }) => {
                       </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           ) : (
@@ -250,14 +263,26 @@ const Home = ({ user, onLogout }) => {
               {featuredProducts.map((product) => (
                 <div key={product._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
                   <div className="relative">
-                    <div className="w-full h-48">
-                      <ResponsiveImage
-                        image={product.images?.[0]}
-                        alt={product.name}
+                    <Link to={`/product/${product._id}`}>
+                      <div className="w-full h-48">
+                        <ResponsiveImage
+                          image={product.images?.[0]}
+                          alt={product.name}
+                          size="medium"
+                          className="w-full h-full"
+                        />
+                      </div>
+                    </Link>
+                    
+                    {/* Wishlist Button */}
+                    <div className="absolute top-2 right-2">
+                      <AddToWishlistButton 
+                        product={product} 
+                        variant="icon" 
                         size="medium"
-                        className="w-full h-full"
                       />
                     </div>
+                    
                     {product.discountPrice && (
                       <div className="absolute top-2 left-2 bg-red-500 text-white px-2 py-1 rounded text-sm font-semibold">
                         {product.discountPercentage}% OFF
@@ -265,7 +290,11 @@ const Home = ({ user, onLogout }) => {
                     )}
                   </div>
                   <div className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{product.name}</h3>
+                    <Link to={`/product/${product._id}`}>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 hover:text-yellow-600 transition-colors">
+                        {product.name}
+                      </h3>
+                    </Link>
                     <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-2">
@@ -280,17 +309,27 @@ const Home = ({ user, onLogout }) => {
                       </div>
                       <span className="text-sm text-gray-500">{product.category}</span>
                     </div>
-                    <button
-                      onClick={() => handleAddToCart(product)}
-                      disabled={addedToCart[product._id]}
-                      className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors ${
-                        addedToCart[product._id]
-                          ? 'bg-green-500 text-white'
-                          : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                      }`}
-                    >
-                      {addedToCart[product._id] ? 'Added to Cart!' : 'Add to Cart'}
-                    </button>
+                    
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleAddToCart(product)}
+                        disabled={addedToCart[product._id]}
+                        className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-colors ${
+                          addedToCart[product._id]
+                            ? 'bg-green-500 text-white'
+                            : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                        }`}
+                      >
+                        {addedToCart[product._id] ? 'Added to Cart!' : 'Add to Cart'}
+                      </button>
+                      
+                      <Link
+                        to={`/product/${product._id}`}
+                        className="px-4 py-2 border border-yellow-600 text-yellow-600 rounded-lg hover:bg-yellow-600 hover:text-white transition-colors"
+                      >
+                        View
+                      </Link>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -320,12 +359,20 @@ const Home = ({ user, onLogout }) => {
           <p className="text-yellow-100 text-lg mb-8 max-w-2xl mx-auto">
             Browse our complete collection and discover jewelry that tells your story.
           </p>
-          <Link 
-            to="/collections" 
-            className="bg-white text-yellow-600 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors"
-          >
-            View All Collections
-          </Link>
+          <div className="flex justify-center space-x-4">
+            <Link 
+              to="/collections" 
+              className="bg-white text-yellow-600 px-8 py-3 rounded-lg text-lg font-semibold hover:bg-gray-100 transition-colors"
+            >
+              View All Collections
+            </Link>
+            <Link 
+              to="/wishlist" 
+              className="border-2 border-white text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-white hover:text-yellow-600 transition-colors"
+            >
+              View Wishlist ({getWishlistCount()})
+            </Link>
+          </div>
         </div>
       </section>
 

@@ -1,15 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useWishlist } from '../context/WishlistContext';
 import ResponsiveImage from './common/ResponsiveImage';
 import CartIcon from './Cart/CartIcon';
 import ShoppingCart from './Cart/ShoppingCart';
+import WishlistIcon from './Wishlist/WishlistIcon';
+import AddToWishlistButton from './Wishlist/AddToWishlistButton';
 import axios from 'axios';
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { getWishlistCount } = useWishlist();
   
   const [product, setProduct] = useState(null);
   const [relatedProducts, setRelatedProducts] = useState([]);
@@ -77,7 +81,12 @@ const ProductDetail = () => {
                   Sri Vasavi Jewels
                 </span>
               </Link>
-              <CartIcon onClick={() => setIsCartOpen(true)} />
+              <div className="flex items-center space-x-4">
+                <Link to="/wishlist">
+                  <WishlistIcon />
+                </Link>
+                <CartIcon onClick={() => setIsCartOpen(true)} />
+              </div>
             </div>
           </div>
         </nav>
@@ -144,7 +153,12 @@ const ProductDetail = () => {
               </Link>
             </div>
             
-            <CartIcon onClick={() => setIsCartOpen(true)} />
+            <div className="flex items-center space-x-4">
+              <Link to="/wishlist">
+                <WishlistIcon />
+              </Link>
+              <CartIcon onClick={() => setIsCartOpen(true)} />
+            </div>
           </div>
         </div>
       </nav>
@@ -306,7 +320,7 @@ const ProductDetail = () => {
               </div>
             )}
 
-            {/* Add to Cart */}
+            {/* Actions */}
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
                 <label className="text-sm font-medium text-gray-700">Quantity:</label>
@@ -327,24 +341,32 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              <button
-                onClick={handleAddToCart}
-                disabled={addedToCart || product.stock.quantity === 0}
-                className={`w-full py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
-                  product.stock.quantity === 0
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              <div className="flex space-x-4">
+                <button
+                  onClick={handleAddToCart}
+                  disabled={addedToCart || product.stock.quantity === 0}
+                  className={`flex-1 py-3 px-6 rounded-lg font-semibold text-lg transition-colors ${
+                    product.stock.quantity === 0
+                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      : addedToCart
+                      ? 'bg-green-500 text-white'
+                      : 'bg-yellow-600 text-white hover:bg-yellow-700'
+                  }`}
+                >
+                  {product.stock.quantity === 0
+                    ? 'Out of Stock'
                     : addedToCart
-                    ? 'bg-green-500 text-white'
-                    : 'bg-yellow-600 text-white hover:bg-yellow-700'
-                }`}
-              >
-                {product.stock.quantity === 0
-                  ? 'Out of Stock'
-                  : addedToCart
-                  ? 'Added to Cart!'
-                  : `Add ${quantity} to Cart`
-                }
-              </button>
+                    ? 'Added to Cart!'
+                    : `Add ${quantity} to Cart`
+                  }
+                </button>
+                
+                <AddToWishlistButton 
+                  product={product} 
+                  size="large"
+                  className="px-6"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -355,26 +377,39 @@ const ProductDetail = () => {
             <h2 className="text-2xl font-bold text-gray-900 mb-8">Related Products</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {relatedProducts.map((relatedProduct) => (
-                <Link
-                  key={relatedProduct._id}
-                  to={`/product/${relatedProduct._id}`}
-                  className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
-                >
-                  <div className="aspect-square">
-                    <ResponsiveImage
-                      image={relatedProduct.images?.[0]}
-                      alt={relatedProduct.name}
-                      size="medium"
-                      className="w-full h-full"
-                    />
+                <div key={relatedProduct._id} className="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow">
+                  <div className="relative">
+                    <Link to={`/product/${relatedProduct._id}`}>
+                      <div className="aspect-square">
+                        <ResponsiveImage
+                          image={relatedProduct.images?.[0]}
+                          alt={relatedProduct.name}
+                          size="medium"
+                          className="w-full h-full"
+                        />
+                      </div>
+                    </Link>
+                    
+                    {/* Wishlist Button */}
+                    <div className="absolute top-2 right-2">
+                      <AddToWishlistButton 
+                        product={relatedProduct} 
+                        variant="icon" 
+                        size="small"
+                      />
+                    </div>
                   </div>
                   <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">{relatedProduct.name}</h3>
+                    <Link to={`/product/${relatedProduct._id}`}>
+                      <h3 className="font-semibold text-gray-900 mb-2 hover:text-yellow-600 transition-colors">
+                        {relatedProduct.name}
+                      </h3>
+                    </Link>
                     <p className="text-yellow-600 font-bold">
                       {formatPrice(relatedProduct.finalPrice)}
                     </p>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           </div>
