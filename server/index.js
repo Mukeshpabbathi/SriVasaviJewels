@@ -42,6 +42,7 @@ app.use('/api/admin/products', require('./routes/productRoutes'));
 app.use('/api/admin/config', require('./routes/configRoutes'));
 app.use('/api/config', require('./routes/configRoutes'));
 app.use('/api/products', require('./routes/publicProductRoutes')); // Public product routes
+app.use('/api/chat', require('./routes/chatRoutes')); // AI Chat routes
 
 // Health check endpoint
 app.get('/api/health', async (req, res) => {
@@ -68,7 +69,8 @@ app.get('/', (req, res) => {
       admin: '/api/admin',
       adminProducts: '/api/admin/products',
       config: '/api/config',
-      products: '/api/products'
+      products: '/api/products',
+      chat: '/api/chat'
     }
   });
 });

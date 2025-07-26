@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { CartProvider } from './context/CartContext';
 import { WishlistProvider } from './context/WishlistContext';
+import { ChatProvider } from './context/ChatContext';
 import Login from './components/Auth/Login';
 import Signup from './components/Auth/Signup';
 import Home from './components/Home';
@@ -11,6 +12,8 @@ import WishlistPage from './components/Wishlist/WishlistPage';
 import About from './components/About';
 import Contact from './components/Contact';
 import AdminDashboard from './components/Admin/AdminDashboard';
+import ChatBubble from './components/Chat/ChatBubble';
+import ChatWindow from './components/Chat/ChatWindow';
 
 function App() {
   const [user, setUser] = useState(null);
@@ -71,64 +74,70 @@ function App() {
   return (
     <CartProvider>
       <WishlistProvider>
-        <Router>
-          <div className="App">
-            <Routes>
-              <Route 
-                path="/" 
-                element={<Home user={user} onLogout={handleLogout} />} 
-              />
-              <Route 
-                path="/collections" 
-                element={<Collections />} 
-              />
-              <Route 
-                path="/product/:id" 
-                element={<ProductDetail />} 
-              />
-              <Route 
-                path="/wishlist" 
-                element={<WishlistPage />} 
-              />
-              <Route 
-                path="/about" 
-                element={<About />} 
-              />
-              <Route 
-                path="/contact" 
-                element={<Contact />} 
-              />
-              <Route 
-                path="/login" 
-                element={
-                  user ? (
-                    user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/" />
-                  ) : (
-                    <Login onLogin={handleLogin} />
-                  )
-                } 
-              />
-              <Route 
-                path="/signup" 
-                element={
-                  user ? (
-                    user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/" />
-                  ) : (
-                    <Signup onSignup={handleSignup} />
-                  )
-                } 
-              />
-              <Route 
-                path="/admin" 
-                element={
-                  user && user.role === 'admin' 
-                    ? <AdminDashboard user={user} onLogout={handleLogout} />
-                    : <Navigate to="/login" />
-                } 
-              />
-            </Routes>
-          </div>
-        </Router>
+        <ChatProvider>
+          <Router>
+            <div className="App">
+              <Routes>
+                <Route 
+                  path="/" 
+                  element={<Home user={user} onLogout={handleLogout} />} 
+                />
+                <Route 
+                  path="/collections" 
+                  element={<Collections />} 
+                />
+                <Route 
+                  path="/product/:id" 
+                  element={<ProductDetail />} 
+                />
+                <Route 
+                  path="/wishlist" 
+                  element={<WishlistPage />} 
+                />
+                <Route 
+                  path="/about" 
+                  element={<About />} 
+                />
+                <Route 
+                  path="/contact" 
+                  element={<Contact />} 
+                />
+                <Route 
+                  path="/login" 
+                  element={
+                    user ? (
+                      user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/" />
+                    ) : (
+                      <Login onLogin={handleLogin} />
+                    )
+                  } 
+                />
+                <Route 
+                  path="/signup" 
+                  element={
+                    user ? (
+                      user.role === 'admin' ? <Navigate to="/admin" /> : <Navigate to="/" />
+                    ) : (
+                      <Signup onSignup={handleSignup} />
+                    )
+                  } 
+                />
+                <Route 
+                  path="/admin" 
+                  element={
+                    user && user.role === 'admin' 
+                      ? <AdminDashboard user={user} onLogout={handleLogout} />
+                      : <Navigate to="/login" />
+                  } 
+                />
+              </Routes>
+              
+              {/* AI Chat System - Available on all pages */}
+              <ChatBubble />
+              <ChatWindow />
+            </div>
+          </Router>
+        </ChatProvider>
       </WishlistProvider>
     </CartProvider>
   );
