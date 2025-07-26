@@ -1,21 +1,26 @@
-// API configuration
-const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
-export default {
-  baseURL: API_URL,
+const apiConfig = {
+  baseURL: API_BASE_URL,
   endpoints: {
     auth: {
-      login: `${API_URL}/api/auth/login`,
-      signup: `${API_URL}/api/auth/signup`,
-      profile: `${API_URL}/api/auth/profile`,
+      login: `${API_BASE_URL}/api/auth/login`,
+      signup: `${API_BASE_URL}/api/auth/signup`,
+      profile: `${API_BASE_URL}/api/auth/profile`
     },
     admin: {
-      users: `${API_URL}/api/admin/users`,
-      stats: `${API_URL}/api/admin/stats`,
+      stats: `${API_BASE_URL}/api/admin/stats`,
+      users: `${API_BASE_URL}/api/admin/users`,
+      products: `${API_BASE_URL}/api/admin/products`
     },
     products: {
-      list: `${API_URL}/api/products`,
-      detail: (id) => `${API_URL}/api/products/${id}`,
-    },
-  },
+      list: `${API_BASE_URL}/api/admin/products`,
+      create: `${API_BASE_URL}/api/admin/products`,
+      update: (id) => `${API_BASE_URL}/api/admin/products/${id}`,
+      delete: (id) => `${API_BASE_URL}/api/admin/products/${id}`,
+      bulk: `${API_BASE_URL}/api/admin/products/bulk`
+    }
+  }
 };
+
+export default apiConfig;
