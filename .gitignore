@@ -153,3 +153,4 @@ Thumbs.db
 server/*.log
 client/*.log
 *.log
+mongodb-macos-x86_64-7.0.0/
