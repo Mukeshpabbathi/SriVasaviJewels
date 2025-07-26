@@ -8,6 +8,7 @@ const ChatWindow = () => {
     messages, 
     isTyping, 
     isChatOpen, 
+    currentUser,
     sendMessage, 
     sendQuickReply, 
     closeChat, 
@@ -85,9 +86,11 @@ const ChatWindow = () => {
               <span className="text-sm font-bold">💎</span>
             </div>
             <div>
-              <h3 className="font-semibold text-sm">Jewelry Assistant</h3>
+              <h3 className="font-semibold text-sm">
+                {currentUser ? `Hi ${currentUser.name}!` : 'Jewelry Assistant'}
+              </h3>
               <p className="text-xs opacity-90">
-                {isTyping ? 'Typing...' : 'Online'}
+                {isTyping ? 'Typing...' : currentUser ? 'Personal Assistant' : 'Online'}
               </p>
             </div>
           </div>
@@ -254,7 +257,10 @@ const ChatWindow = () => {
               </form>
               
               <p className="text-xs text-gray-500 mt-2 text-center">
-                Powered by Sri Vasavi Jewels AI Assistant
+                {currentUser 
+                  ? `Chat saved for ${currentUser.name} • Powered by Sri Vasavi Jewels AI`
+                  : 'Guest session • Chat will reset on page reload'
+                }
               </p>
             </div>
           </>

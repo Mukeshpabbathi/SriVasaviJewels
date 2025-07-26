@@ -11,7 +11,8 @@ const CHAT_ACTIONS = {
   SET_CHAT_OPEN: 'SET_CHAT_OPEN',
   SET_LOADING: 'SET_LOADING',
   CLEAR_CHAT: 'CLEAR_CHAT',
-  SET_QUICK_REPLIES: 'SET_QUICK_REPLIES'
+  SET_QUICK_REPLIES: 'SET_QUICK_REPLIES',
+  SET_USER: 'SET_USER'
 };
 
 // Chat reducer
@@ -67,10 +68,10 @@ const chatReducer = (state, action) => {
         ]
       };
     
-    case CHAT_ACTIONS.SET_QUICK_REPLIES:
+    case CHAT_ACTIONS.SET_USER:
       return {
         ...state,
-        quickReplies: action.payload
+        currentUser: action.payload
       };
     
     default:
@@ -79,60 +80,176 @@ const chatReducer = (state, action) => {
 };
 
 // Initial state
+const getInitialMessage = (user) => ({
+  id: Date.now(),
+  type: 'bot',
+  content: user 
+    ? `Hello ${user.name}! Welcome back to Sri Vasavi Jewels. How can I help you find the perfect jewelry today?`
+    : "Hello! I'm your jewelry assistant at Sri Vasavi Jewels. How can I help you find the perfect piece today?",
+  timestamp: new Date(),
+  quickReplies: [
+    'Show me gold necklaces',
+    'What\'s trending?',
+    'Help with ring sizes',
+    'Care instructions'
+  ]
+});
+
 const initialState = {
-  messages: [
-    {
-      id: Date.now(),
-      type: 'bot',
-      content: "Hello! I'm your jewelry assistant at Sri Vasavi Jewels. How can I help you find the perfect piece today?",
-      timestamp: new Date(),
-      quickReplies: [
-        'Show me gold necklaces',
-        'What\'s trending?',
-        'Help with ring sizes',
-        'Care instructions'
-      ]
-    }
-  ],
+  messages: [],
   isTyping: false,
   isChatOpen: false,
   loading: false,
-  quickReplies: []
+  currentUser: null
 };
 
 // Chat Provider
 export const ChatProvider = ({ children }) => {
   const [state, dispatch] = useReducer(chatReducer, initialState);
 
-  // Load chat history on mount
+  // Initialize chat when component mounts or user changes
   useEffect(() => {
-    loadChatHistory();
+    const user = getCurrentUser();
+    dispatch({ type: CHAT_ACTIONS.SET_USER, payload: user });
+    loadChatHistory(user);
   }, []);
 
-  // Save chat history whenever messages change
+  // Watch for user login/logout changes
   useEffect(() => {
-    if (state.messages.length > 1) { // Don't save just the initial message
-      localStorage.setItem('chatHistory', JSON.stringify(state.messages));
-    }
-  }, [state.messages]);
+    const handleStorageChange = () => {
+      const user = getCurrentUser();
+      const currentUserId = state.currentUser?._id;
+      const newUserId = user?._id;
+      
+      // If user changed (login/logout), reload chat
+      if (currentUserId !== newUserId) {
+        dispatch({ type: CHAT_ACTIONS.SET_USER, payload: user });
+        loadChatHistory(user);
+      }
+    };
 
-  // Load chat history from localStorage
-  const loadChatHistory = () => {
+    // Listen for localStorage changes (login/logout)
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Also check periodically for same-tab changes
+    const interval = setInterval(handleStorageChange, 1000);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [state.currentUser]);
+
+  // Get current user from localStorage
+  const getCurrentUser = () => {
     try {
-      const savedMessages = localStorage.getItem('chatHistory');
-      if (savedMessages) {
-        const messages = JSON.parse(savedMessages);
-        // Add timestamps if missing (for backward compatibility)
-        const messagesWithTimestamps = messages.map(msg => ({
-          ...msg,
-          timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
-        }));
-        dispatch({ type: CHAT_ACTIONS.SET_MESSAGES, payload: messagesWithTimestamps });
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      
+      if (token && userData) {
+        return JSON.parse(userData);
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
+  };
+
+  // Generate storage key based on user
+  const getChatStorageKey = (user) => {
+    if (user && user._id) {
+      return `chatHistory_user_${user._id}`;
+    }
+    return 'chatHistory_guest';
+  };
+
+  // Load chat history based on user status
+  const loadChatHistory = async (user) => {
+    try {
+      dispatch({ type: CHAT_ACTIONS.SET_LOADING, payload: true });
+      
+      if (user && user._id) {
+        // For logged-in users: Try server first, then localStorage
+        try {
+          const token = localStorage.getItem('token');
+          const response = await axios.get('http://localhost:4000/api/chat/history', {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (response.data.success && response.data.data.length > 0) {
+            const messages = response.data.data.map(msg => ({
+              ...msg,
+              timestamp: new Date(msg.timestamp)
+            }));
+            dispatch({ type: CHAT_ACTIONS.SET_MESSAGES, payload: messages });
+            return;
+          }
+        } catch (error) {
+          console.log('Server chat history not available, checking localStorage');
+        }
+        
+        // Fallback to localStorage for logged-in users
+        const storageKey = getChatStorageKey(user);
+        const savedMessages = localStorage.getItem(storageKey);
+        
+        if (savedMessages) {
+          const messages = JSON.parse(savedMessages).map(msg => ({
+            ...msg,
+            timestamp: new Date(msg.timestamp)
+          }));
+          dispatch({ type: CHAT_ACTIONS.SET_MESSAGES, payload: messages });
+        } else {
+          // New user - start with welcome message
+          dispatch({ type: CHAT_ACTIONS.SET_MESSAGES, payload: [getInitialMessage(user)] });
+        }
+      } else {
+        // For guest users: Always start fresh (no persistence)
+        dispatch({ type: CHAT_ACTIONS.SET_MESSAGES, payload: [getInitialMessage(null)] });
       }
     } catch (error) {
       console.error('Error loading chat history:', error);
+      dispatch({ type: CHAT_ACTIONS.SET_MESSAGES, payload: [getInitialMessage(user)] });
+    } finally {
+      dispatch({ type: CHAT_ACTIONS.SET_LOADING, payload: false });
     }
   };
+
+  // Save chat history (only for logged-in users)
+  const saveChatHistory = async (messages, user) => {
+    if (!user || !user._id) {
+      // Don't save for guest users
+      return;
+    }
+
+    try {
+      // Save to localStorage
+      const storageKey = getChatStorageKey(user);
+      localStorage.setItem(storageKey, JSON.stringify(messages));
+
+      // Try to save to server for logged-in users
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          await axios.post('http://localhost:4000/api/chat/history', 
+            { messages },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        } catch (error) {
+          console.log('Server save failed, using localStorage only');
+        }
+      }
+    } catch (error) {
+      console.error('Error saving chat history:', error);
+    }
+  };
+
+  // Save messages whenever they change (only for logged-in users)
+  useEffect(() => {
+    if (state.messages.length > 1 && state.currentUser) {
+      saveChatHistory(state.messages, state.currentUser);
+    }
+  }, [state.messages, state.currentUser]);
 
   // Send message to AI
   const sendMessage = async (content, type = 'user') => {
@@ -148,10 +265,11 @@ export const ChatProvider = ({ children }) => {
       dispatch({ type: CHAT_ACTIONS.ADD_MESSAGE, payload: userMessage });
       dispatch({ type: CHAT_ACTIONS.SET_TYPING, payload: true });
 
-      // Send to AI service
+      // Send to AI service with user context
       const response = await axios.post('http://localhost:4000/api/chat/message', {
         message: content,
-        chatHistory: state.messages.slice(-10) // Send last 10 messages for context
+        chatHistory: state.messages.slice(-10), // Send last 10 messages for context
+        user: state.currentUser // Send user info for personalization
       });
 
       dispatch({ type: CHAT_ACTIONS.SET_TYPING, payload: false });
@@ -204,7 +322,22 @@ export const ChatProvider = ({ children }) => {
 
   // Clear chat history
   const clearChat = () => {
-    localStorage.removeItem('chatHistory');
+    const user = state.currentUser;
+    
+    if (user && user._id) {
+      // For logged-in users, clear from localStorage and server
+      const storageKey = getChatStorageKey(user);
+      localStorage.removeItem(storageKey);
+      
+      // Try to clear from server
+      const token = localStorage.getItem('token');
+      if (token) {
+        axios.delete('http://localhost:4000/api/chat/history', {
+          headers: { Authorization: `Bearer ${token}` }
+        }).catch(error => console.log('Server clear failed'));
+      }
+    }
+    
     dispatch({ type: CHAT_ACTIONS.CLEAR_CHAT });
   };
 
@@ -217,7 +350,11 @@ export const ChatProvider = ({ children }) => {
   const getUnreadCount = () => {
     if (state.isChatOpen) return 0;
     
-    const lastOpenTime = localStorage.getItem('lastChatOpenTime');
+    const lastOpenKey = state.currentUser 
+      ? `lastChatOpenTime_user_${state.currentUser._id}`
+      : 'lastChatOpenTime_guest';
+    
+    const lastOpenTime = localStorage.getItem(lastOpenKey);
     if (!lastOpenTime) return state.messages.filter(m => m.type === 'bot').length;
     
     const lastOpen = new Date(lastOpenTime);
@@ -228,7 +365,11 @@ export const ChatProvider = ({ children }) => {
 
   // Mark messages as read
   const markAsRead = () => {
-    localStorage.setItem('lastChatOpenTime', new Date().toISOString());
+    const lastOpenKey = state.currentUser 
+      ? `lastChatOpenTime_user_${state.currentUser._id}`
+      : 'lastChatOpenTime_guest';
+    
+    localStorage.setItem(lastOpenKey, new Date().toISOString());
   };
 
   const value = {
@@ -236,6 +377,7 @@ export const ChatProvider = ({ children }) => {
     isTyping: state.isTyping,
     isChatOpen: state.isChatOpen,
     loading: state.loading,
+    currentUser: state.currentUser,
     sendMessage,
     sendQuickReply,
     toggleChat,

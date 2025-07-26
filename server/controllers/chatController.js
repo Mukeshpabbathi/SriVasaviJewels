@@ -1,4 +1,5 @@
 const Product = require('../models/Product');
+const ChatHistory = require('../models/ChatHistory');
 
 // Enhanced jewelry knowledge base
 const JEWELRY_KNOWLEDGE = {
@@ -681,6 +682,94 @@ class ChatController {
       response: 'I\'m your jewelry assistant at Sri Vasavi Jewels! 💎\n\nI can help you with:\n• Finding perfect jewelry pieces\n• Answering questions about metals and gems\n• Providing care instructions\n• Sizing guidance\n• Style recommendations\n• Budget advice\n\nWhat would you like to explore today?',
       quickReplies: QUICK_REPLIES.greeting
     };
+  }
+
+  // Chat History Management Methods
+
+  // Get chat history for authenticated user
+  static async getChatHistory(req, res) {
+    try {
+      const userId = req.user._id;
+      
+      const chatHistory = await ChatHistory.findOne({ userId });
+      
+      if (chatHistory) {
+        res.json({
+          success: true,
+          data: chatHistory.messages
+        });
+      } else {
+        res.json({
+          success: true,
+          data: []
+        });
+      }
+    } catch (error) {
+      console.error('Get chat history error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error retrieving chat history'
+      });
+    }
+  }
+
+  // Save chat history for authenticated user
+  static async saveChatHistory(req, res) {
+    try {
+      const userId = req.user._id;
+      const { messages } = req.body;
+      
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Messages array is required'
+        });
+      }
+
+      // Update or create chat history
+      await ChatHistory.findOneAndUpdate(
+        { userId },
+        { 
+          messages,
+          lastUpdated: new Date()
+        },
+        { 
+          upsert: true,
+          new: true
+        }
+      );
+
+      res.json({
+        success: true,
+        message: 'Chat history saved successfully'
+      });
+    } catch (error) {
+      console.error('Save chat history error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error saving chat history'
+      });
+    }
+  }
+
+  // Clear chat history for authenticated user
+  static async clearChatHistory(req, res) {
+    try {
+      const userId = req.user._id;
+      
+      await ChatHistory.findOneAndDelete({ userId });
+
+      res.json({
+        success: true,
+        message: 'Chat history cleared successfully'
+      });
+    } catch (error) {
+      console.error('Clear chat history error:', error);
+      res.status(500).json({
+        success: false,
+        message: 'Error clearing chat history'
+      });
+    }
   }
 }
 
