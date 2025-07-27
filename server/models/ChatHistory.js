@@ -57,8 +57,7 @@ chatHistorySchema.pre('save', function(next) {
   next();
 });
 
-// Index for efficient queries
-chatHistorySchema.index({ userId: 1 });
+// Index for efficient queries (userId already has unique index from schema definition)
 chatHistorySchema.index({ lastUpdated: -1 });
 
 module.exports = mongoose.model('ChatHistory', chatHistorySchema);
