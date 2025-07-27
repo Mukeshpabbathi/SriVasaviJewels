@@ -9,6 +9,7 @@ import AddToWishlistButton from './Wishlist/AddToWishlistButton';
 import ResponsiveImage from './common/ResponsiveImage';
 import AdvancedSearch from './common/AdvancedSearch';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../utils/api';
 
 const Collections = () => {
   const { addToCart } = useCart();
@@ -72,8 +73,8 @@ const Collections = () => {
       params.append('sortBy', sortBy);
       
       const endpoint = searchQuery ? 
-        `http://localhost:4000/api/products/search?${params}` :
-        `http://localhost:4000/api/products?${params}`;
+        `${API_ENDPOINTS.PRODUCTS.SEARCH}?${params}` :
+        `${API_ENDPOINTS.PRODUCTS.BASE}?${params}`;
       
       const response = await axios.get(endpoint);
       

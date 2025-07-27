@@ -8,6 +8,7 @@ import WishlistIcon from './Wishlist/WishlistIcon';
 import AddToWishlistButton from './Wishlist/AddToWishlistButton';
 import ResponsiveImage from './common/ResponsiveImage';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../utils/api';
 
 const Home = ({ user, onLogout }) => {
   const { addToCart } = useCart();
@@ -25,13 +26,13 @@ const Home = ({ user, onLogout }) => {
         setLoading(true);
         
         // Fetch featured products
-        const featuredResponse = await axios.get('http://localhost:4000/api/products/featured?limit=6');
+        const featuredResponse = await axios.get(`${API_ENDPOINTS.PRODUCTS.FEATURED}?limit=6`);
         if (featuredResponse.data.success) {
           setFeaturedProducts(featuredResponse.data.data);
         }
         
         // Fetch categories with sample products
-        const categoriesResponse = await axios.get('http://localhost:4000/api/products/categories');
+        const categoriesResponse = await axios.get(API_ENDPOINTS.PRODUCTS.CATEGORIES);
         if (categoriesResponse.data.success) {
           setCategories(categoriesResponse.data.data);
         }

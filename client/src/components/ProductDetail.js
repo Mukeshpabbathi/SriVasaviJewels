@@ -8,6 +8,7 @@ import ShoppingCart from './Cart/ShoppingCart';
 import WishlistIcon from './Wishlist/WishlistIcon';
 import AddToWishlistButton from './Wishlist/AddToWishlistButton';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../utils/api';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -27,7 +28,7 @@ const ProductDetail = () => {
     const fetchProduct = async () => {
       try {
         setLoading(true);
-        const response = await axios.get(`http://localhost:4000/api/products/${id}`);
+        const response = await axios.get(API_ENDPOINTS.PRODUCTS.BY_ID(id));
         
         if (response.data.success) {
           setProduct(response.data.data.product);

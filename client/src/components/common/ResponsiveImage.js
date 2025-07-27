@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getImageUrl } from '../../utils/api';
 
 const ResponsiveImage = ({ 
   image, 
@@ -16,19 +17,19 @@ const ResponsiveImage = ({
     
     // If it's a string (old format or simple URL)
     if (typeof imageData === 'string') {
-      return imageData.startsWith('http') ? imageData : `http://localhost:4000${imageData}`;
+      return getImageUrl(imageData);
     }
     
     // If it's new format with responsive images
     if (imageData.responsive && imageData.responsive[requestedSize]) {
       const url = imageData.responsive[requestedSize];
-      return url.startsWith('http') ? url : `http://localhost:4000${url}`;
+      return getImageUrl(url);
     }
     
     // Fallback to main URL
     if (imageData.url) {
       const url = imageData.url;
-      return url.startsWith('http') ? url : `http://localhost:4000${url}`;
+      return getImageUrl(url);
     }
     
     return fallbackSrc;
@@ -38,12 +39,12 @@ const ResponsiveImage = ({
     if (!imageData) return fallbackSrc;
     
     if (typeof imageData === 'string') {
-      return imageData.startsWith('http') ? imageData : `http://localhost:4000${imageData}`;
+      return getImageUrl(imageData);
     }
     
     if (imageData.fallbackUrl) {
       const url = imageData.fallbackUrl;
-      return url.startsWith('http') ? url : `http://localhost:4000${url}`;
+      return getImageUrl(url);
     }
     
     return getImageUrl(imageData);
@@ -53,8 +54,9 @@ const ResponsiveImage = ({
     if (!imageData || typeof imageData === 'string') return '';
     
     if (imageData.srcSet) {
-      // Convert relative URLs to absolute
-      return imageData.srcSet.replace(/\/uploads/g, 'http://localhost:4000/uploads');
+      // Convert relative URLs to absolute using API utility
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+      return imageData.srcSet.replace(/\/uploads/g, `${API_BASE_URL}/uploads`);
     }
     
     return '';

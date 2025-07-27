@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../utils/api';
 
 const ChatContext = createContext();
 
@@ -173,7 +174,7 @@ export const ChatProvider = ({ children }) => {
         // For logged-in users: Try server first, then localStorage
         try {
           const token = localStorage.getItem('token');
-          const response = await axios.get('http://localhost:4000/api/chat/history', {
+          const response = await axios.get(API_ENDPOINTS.CHAT.HISTORY, {
             headers: { Authorization: `Bearer ${token}` }
           });
           
@@ -231,7 +232,7 @@ export const ChatProvider = ({ children }) => {
       const token = localStorage.getItem('token');
       if (token) {
         try {
-          await axios.post('http://localhost:4000/api/chat/history', 
+          await axios.post(API_ENDPOINTS.CHAT.HISTORY, 
             { messages },
             { headers: { Authorization: `Bearer ${token}` } }
           );
@@ -266,7 +267,7 @@ export const ChatProvider = ({ children }) => {
       dispatch({ type: CHAT_ACTIONS.SET_TYPING, payload: true });
 
       // Send to AI service with user context
-      const response = await axios.post('http://localhost:4000/api/chat/message', {
+      const response = await axios.post(API_ENDPOINTS.CHAT.MESSAGE, {
         message: content,
         chatHistory: state.messages.slice(-10), // Send last 10 messages for context
         user: state.currentUser // Send user info for personalization
@@ -332,7 +333,7 @@ export const ChatProvider = ({ children }) => {
       // Try to clear from server
       const token = localStorage.getItem('token');
       if (token) {
-        axios.delete('http://localhost:4000/api/chat/history', {
+        axios.delete(API_ENDPOINTS.CHAT.HISTORY, {
           headers: { Authorization: `Bearer ${token}` }
         }).catch(error => console.log('Server clear failed'));
       }

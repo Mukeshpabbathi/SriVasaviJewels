@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ProductForm from './ProductForm';
+import { API_ENDPOINTS } from '../../utils/api';
 import ProductList from './ProductList';
 import ProductFilters from './ProductFilters';
 
@@ -55,7 +56,7 @@ const ProductManagement = ({ user }) => {
       });
       
       const response = await axios.get(
-        `http://localhost:4000/api/admin/products?${params}`,
+        `${API_ENDPOINTS.ADMIN.PRODUCTS}?${params}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -124,7 +125,7 @@ const ProductManagement = ({ user }) => {
       if (editingProduct) {
         // Update product
         response = await axios.put(
-          `http://localhost:4000/api/admin/products/${editingProduct._id}`,
+          `${API_ENDPOINTS.ADMIN.PRODUCTS}/${editingProduct._id}`,
           formData,
           {
             headers: {
@@ -136,7 +137,7 @@ const ProductManagement = ({ user }) => {
       } else {
         // Create product
         response = await axios.post(
-          'http://localhost:4000/api/admin/products',
+          API_ENDPOINTS.ADMIN.PRODUCTS,
           formData,
           {
             headers: {
@@ -168,7 +169,7 @@ const ProductManagement = ({ user }) => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.delete(
-        `http://localhost:4000/api/admin/products/${productId}`,
+        `${API_ENDPOINTS.ADMIN.PRODUCTS}/${productId}`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
@@ -200,7 +201,7 @@ const ProductManagement = ({ user }) => {
       const token = localStorage.getItem('token');
       
       const response = await axios.post(
-        'http://localhost:4000/api/admin/products/bulk',
+        `${API_ENDPOINTS.ADMIN.PRODUCTS}/bulk`,
         {
           action,
           productIds: selectedProducts,

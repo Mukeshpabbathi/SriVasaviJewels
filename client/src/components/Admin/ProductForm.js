@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_ENDPOINTS } from '../../utils/api';
 
 const ProductForm = ({ product, onSave, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -54,7 +55,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
   const fetchConfigurations = async () => {
     try {
       setConfigLoading(true);
-      const response = await axios.get('http://localhost:4000/api/config/public');
+      const response = await axios.get(API_ENDPOINTS.CONFIG.PUBLIC);
       
       if (response.data.success) {
         setConfigurations(response.data.data);
