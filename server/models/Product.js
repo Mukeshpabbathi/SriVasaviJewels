@@ -52,6 +52,59 @@ const productSchema = new mongoose.Schema({
     required: [true, 'Price is required'],
     min: [0, 'Price cannot be negative']
   },
+  
+  // Dynamic pricing fields
+  pricing: {
+    // Raw material costs
+    wastage: {
+      type: Number,
+      default: 0,
+      min: 0,
+      description: 'Wastage in grams/carats'
+    },
+    makingCharges: {
+      type: Number,
+      required: true,
+      min: 0,
+      default: 0,
+      description: 'Making charges in INR'
+    },
+    
+    // Calculated prices (auto-updated when rates change)
+    metalRate: {
+      type: Number,
+      default: 0,
+      description: 'Current metal rate per gram/carat'
+    },
+    metalCost: {
+      type: Number,
+      default: 0,
+      description: 'Cost of metal (weight + wastage) × rate'
+    },
+    calculatedPrice: {
+      type: Number,
+      default: 0,
+      description: 'Auto-calculated price based on current rates'
+    },
+    
+    // Manual price override (optional)
+    manualPrice: {
+      type: Number,
+      min: 0,
+      description: 'Manual price override (if set, ignores calculated price)'
+    },
+    
+    // Price calculation details
+    priceCalculation: {
+      type: String,
+      description: 'Human-readable price calculation'
+    },
+    
+    lastPriceUpdate: {
+      type: Date,
+      default: Date.now
+    }
+  },
   discountPrice: {
     type: Number,
     min: [0, 'Discount price cannot be negative'],
@@ -213,5 +266,87 @@ productSchema.pre('save', function(next) {
 productSchema.virtual('searchText').get(function() {
   return `${this.name} ${this.description} ${this.category} ${this.metal} ${this.tags.join(' ')}`;
 });
+
+// Virtual for final price (uses manual price if set, otherwise calculated price)
+productSchema.virtual('finalPrice').get(function() {
+  if (this.pricing && this.pricing.manualPrice > 0) {
+    return this.pricing.manualPrice;
+  }
+  if (this.pricing && this.pricing.calculatedPrice > 0) {
+    return this.pricing.calculatedPrice;
+  }
+  return this.price; // Fallback to original price
+});
+
+// Method to update price based on current metal rates
+productSchema.methods.updatePriceFromRates = async function() {
+  const MetalRates = require('./MetalRates');
+  
+  try {
+    const priceData = await MetalRates.calculateProductPrice({
+      metal: this.metal,
+      purity: this.purity,
+      weight: this.weight.value,
+      wastage: this.pricing?.wastage || 0,
+      makingCharges: this.pricing?.makingCharges || 0
+    });
+    
+    // Update pricing fields
+    this.pricing = this.pricing || {};
+    this.pricing.metalRate = priceData.metalRate;
+    this.pricing.metalCost = priceData.metalCost;
+    this.pricing.calculatedPrice = priceData.totalPrice;
+    this.pricing.priceCalculation = priceData.calculation;
+    this.pricing.lastPriceUpdate = new Date();
+    
+    // Update main price field if no manual override
+    if (!this.pricing.manualPrice) {
+      this.price = priceData.totalPrice;
+    }
+    
+    return priceData;
+  } catch (error) {
+    console.error('Error updating price from rates:', error);
+    throw error;
+  }
+};
+
+// Static method to update all product prices
+productSchema.statics.updateAllPricesFromRates = async function() {
+  const products = await this.find({ 
+    metal: { $in: ['Gold', 'Silver', 'Platinum'] },
+    isActive: true 
+  });
+  
+  const results = {
+    updated: 0,
+    errors: 0,
+    details: []
+  };
+  
+  for (const product of products) {
+    try {
+      await product.updatePriceFromRates();
+      await product.save();
+      results.updated++;
+      results.details.push({
+        id: product._id,
+        name: product.name,
+        status: 'updated',
+        newPrice: product.finalPrice
+      });
+    } catch (error) {
+      results.errors++;
+      results.details.push({
+        id: product._id,
+        name: product.name,
+        status: 'error',
+        error: error.message
+      });
+    }
+  }
+  
+  return results;
+};
 
 module.exports = mongoose.model('Product', productSchema);

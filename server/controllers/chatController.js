@@ -212,7 +212,8 @@ class ChatController {
     if (message.includes('diamond')) intent.entities.metal = 'diamond';
 
     // Category detection
-    if (message.includes('necklace') || message.includes('chain')) intent.entities.category = 'necklaces';
+    if (message.includes('necklace')) intent.entities.category = 'necklaces';
+    if (message.includes('chain')) intent.entities.category = 'chains';
     if (message.includes('ring')) intent.entities.category = 'rings';
     if (message.includes('earring')) intent.entities.category = 'earrings';
     if (message.includes('bracelet')) intent.entities.category = 'bracelets';
@@ -252,15 +253,26 @@ class ChatController {
       }
     }
 
-    // Action detection - order matters!
-    if (message.includes('find rings size') || message.includes('show rings size') || message.includes('rings size')) intent.type = 'product_search';
+    // Enhanced action detection - order matters!
+    // Product availability queries
+    if (message.includes('do you have') || message.includes('have you got') || message.includes('available')) intent.type = 'product_search';
+    // Specific product searches
+    else if (message.includes('find rings size') || message.includes('show rings size') || message.includes('rings size')) intent.type = 'product_search';
+    // General product searches
     else if (message.includes('show') || message.includes('find') || message.includes('search')) intent.type = 'product_search';
+    // Care and maintenance
     else if (message.includes('care') || message.includes('clean') || message.includes('maintain')) intent.type = 'care_advice';
+    // Sizing help
     else if (message.includes('size') || message.includes('fit') || message.includes('measure')) intent.type = 'sizing_help';
+    // Pricing information
     else if (message.includes('price') || message.includes('cost') || message.includes('expensive') || message.includes('budget')) intent.type = 'pricing_info';
+    // Trends and fashion
     else if (message.includes('trending') || message.includes('popular') || message.includes('latest') || message.includes('fashion')) intent.type = 'trending';
+    // Comparisons
     else if (message.includes('compare') || message.includes('difference') || message.includes('vs')) intent.type = 'comparison';
+    // Investment advice
     else if (message.includes('invest') || message.includes('value') || message.includes('worth')) intent.type = 'investment_advice';
+    // Store information
     else if (message.includes('location') || message.includes('address') || message.includes('store') || message.includes('shop') || message.includes('visit') || message.includes('where')) intent.type = 'store_info';
 
     return intent;

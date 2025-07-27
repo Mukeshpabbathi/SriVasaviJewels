@@ -40,8 +40,10 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/admin/products', require('./routes/productRoutes'));
 app.use('/api/admin/config', require('./routes/configRoutes'));
+app.use('/api/admin/rates', require('./routes/rateRoutes')); // Rate management routes
 app.use('/api/config', require('./routes/configRoutes'));
 app.use('/api/products', require('./routes/publicProductRoutes')); // Public product routes
+app.use('/api/rates', require('./routes/rateRoutes')); // Public rate routes
 app.use('/api/chat', require('./routes/chatRoutes')); // AI Chat routes
 
 // Health check endpoint
