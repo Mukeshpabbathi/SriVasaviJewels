@@ -9,7 +9,7 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+// Middleware - CORS fix for all origins (Updated: 2025-07-27)
 app.use(cors({
   origin: true,
   credentials: true
