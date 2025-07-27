@@ -250,7 +250,7 @@ const createProduct = async (req, res) => {
       purity,
       weight,
       price,
-      discountPrice,
+      discountPercentage,
       stock,
       dimensions,
       features,
@@ -332,7 +332,7 @@ const createProduct = async (req, res) => {
       purity,
       weight: parsedWeight,
       price: 0, // Will be calculated dynamically
-      discountPrice: discountPrice ? parseFloat(discountPrice) : undefined,
+      discountPercentage: discountPercentage ? parseFloat(discountPercentage) : 0,
       images,
       stock: parsedStock,
       dimensions: parsedDimensions,
@@ -434,7 +434,7 @@ const updateProduct = async (req, res) => {
       purity,
       weight,
       price,
-      discountPrice,
+      discountPercentage,
       stock,
       dimensions,
       features,
@@ -498,8 +498,8 @@ const updateProduct = async (req, res) => {
       product.weight = safeJSONParse(weight, { value: 0, unit: 'grams' });
     }
     // Price is calculated dynamically, not set manually
-    if (discountPrice !== undefined) {
-      product.discountPrice = discountPrice ? parseFloat(discountPrice) : undefined;
+    if (discountPercentage !== undefined) {
+      product.discountPercentage = discountPercentage ? parseFloat(discountPercentage) : 0;
     }
     if (stock) {
       product.stock = safeJSONParse(stock, { quantity: 0 });

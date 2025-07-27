@@ -65,7 +65,23 @@ const ShoppingCart = ({ isOpen, onClose }) => {
                     />
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{item.name}</h3>
-                      <p className="text-gold-600 font-semibold">₹{item.price.toLocaleString()}</p>
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <p className="text-gold-600 font-semibold">
+                            ₹{(item.finalPrice || item.price).toLocaleString()}
+                          </p>
+                          {item.discountPercentage > 0 && (
+                            <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                              {item.discountPercentage}% OFF
+                            </span>
+                          )}
+                        </div>
+                        {item.discountPercentage > 0 && (
+                          <p className="text-xs text-gray-500 line-through">
+                            Original: ₹{item.price.toLocaleString()}
+                          </p>
+                        )}
+                      </div>
                       
                       <div className="flex items-center mt-2">
                         <button
@@ -90,7 +106,7 @@ const ShoppingCart = ({ isOpen, onClose }) => {
                     
                     <div className="text-right">
                       <p className="font-semibold text-gray-900">
-                        ₹{(item.price * item.quantity).toLocaleString()}
+                        ₹{((item.finalPrice || item.price) * item.quantity).toLocaleString()}
                       </p>
                       <button
                         onClick={() => removeFromCart(item.id)}

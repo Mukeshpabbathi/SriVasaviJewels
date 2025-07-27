@@ -107,15 +107,12 @@ const productSchema = new mongoose.Schema({
       default: Date.now
     }
   },
-  discountPrice: {
+  discountPercentage: {
     type: Number,
-    min: [0, 'Discount price cannot be negative'],
-    validate: {
-      validator: function(v) {
-        return !v || v < this.price;
-      },
-      message: 'Discount price must be less than regular price'
-    }
+    min: [0, 'Discount percentage cannot be negative'],
+    max: [100, 'Discount percentage cannot exceed 100%'],
+    default: 0,
+    description: 'Discount percentage (e.g., 10 for 10% off)'
   },
   images: [{
     url: {
@@ -220,14 +217,14 @@ const productSchema = new mongoose.Schema({
         finalPrice = ret.pricing.calculatedPrice;
       }
       
-      // Apply discount if available
-      ret.finalPrice = ret.discountPrice || finalPrice;
-      
-      // Calculate discount percentage
-      if (ret.discountPrice && ret.price > ret.discountPrice) {
-        ret.discountPercentage = Math.round(((ret.price - ret.discountPrice) / ret.price) * 100);
+      // Apply discount percentage if available
+      if (ret.discountPercentage && ret.discountPercentage > 0) {
+        const discountAmount = (finalPrice * ret.discountPercentage) / 100;
+        ret.finalPrice = Math.round((finalPrice - discountAmount) * 100) / 100;
+        ret.discountAmount = Math.round(discountAmount * 100) / 100;
       } else {
-        ret.discountPercentage = 0;
+        ret.finalPrice = finalPrice;
+        ret.discountAmount = 0;
       }
       
       // Update stock status based on quantity

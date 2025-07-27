@@ -29,10 +29,10 @@ const validateCreateProduct = [
     .isIn(['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'])
     .withMessage('Invalid purity value. Please select from available options.'),
     
-  body('discountPrice')
+  body('discountPercentage')
     .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Discount price must be a positive number'),
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Discount percentage must be between 0 and 100'),
     
   body('weight')
     .optional()
@@ -200,10 +200,10 @@ const validateUpdateProduct = [
     .isIn(['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'])
     .withMessage('Invalid purity value. Please select from available options.'),
     
-  body('discountPrice')
+  body('discountPercentage')
     .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Discount price must be a positive number'),
+    .isFloat({ min: 0, max: 100 })
+    .withMessage('Discount percentage must be between 0 and 100'),
     
   body('weight')
     .optional()

@@ -441,18 +441,25 @@ const Collections = () => {
                       <p className="text-gray-600 text-sm mb-3 line-clamp-2">{product.description}</p>
                       
                       <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-xl font-bold text-gray-900">
-                            {formatPrice(product.finalPrice)}
-                          </span>
-                          {product.discountPrice && (
-                            <span className="text-sm text-gray-500 line-through">
-                              {formatPrice(product.price)}
+                        <div className="space-y-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xl font-bold text-gray-900">
+                              {formatPrice(product.finalPrice)}
                             </span>
+                            {product.discountPercentage > 0 && (
+                              <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium">
+                                {product.discountPercentage}% OFF
+                              </span>
+                            )}
+                          </div>
+                          {product.discountPercentage > 0 && (
+                            <div className="text-sm text-gray-500 line-through">
+                              Original: {formatPrice(product.price)}
+                            </div>
                           )}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          Stock: {product.stock.quantity}
+                          <div className="text-sm text-gray-500">
+                            Stock: {product.stock.quantity}
+                          </div>
                         </div>
                       </div>
                       

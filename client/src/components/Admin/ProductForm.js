@@ -10,7 +10,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
     metal: '',
     purity: '',
     weight: { value: '', unit: 'grams' },
-    discountPrice: '',
+    discountPercentage: '',
     stock: { quantity: 0 },
     dimensions: { length: '', width: '', height: '', unit: 'mm' },
     features: [],
@@ -87,7 +87,7 @@ const ProductForm = ({ product, onSave, onCancel }) => {
         metal: product.metal || '',
         purity: product.purity || '',
         weight: product.weight || { value: '', unit: 'grams' },
-        discountPrice: product.discountPrice || '',
+        discountPercentage: product.discountPercentage || '',
         stock: product.stock || { quantity: 0 },
         dimensions: product.dimensions || { length: '', width: '', height: '', unit: 'mm' },
         features: product.features || [],
@@ -471,20 +471,21 @@ const ProductForm = ({ product, onSave, onCancel }) => {
           {/* Optional Discount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Discount Price (₹) <span className="text-gray-400">(Optional)</span>
+              Discount Percentage (%) <span className="text-gray-400">(Optional)</span>
             </label>
             <input
               type="number"
-              name="discountPrice"
-              value={formData.discountPrice}
+              name="discountPercentage"
+              value={formData.discountPercentage}
               onChange={handleInputChange}
               min="0"
-              step="0.01"
+              max="100"
+              step="0.1"
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-              placeholder="Enter discount price (optional)"
+              placeholder="e.g., 10 for 10% off"
             />
             <p className="text-xs text-gray-500 mt-1">
-              If set, this will override the calculated price for display
+              Percentage discount to apply on calculated price (e.g., 10 for 10% off)
             </p>
           </div>
 

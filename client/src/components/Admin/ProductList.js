@@ -190,9 +190,14 @@ const ProductList = ({ products, onEdit, onDelete, onBulkAction, loading }) => {
                     <div className="text-sm font-medium text-gray-900">
                       {formatPrice(product.finalPrice)}
                     </div>
-                    {product.discountPrice && (
-                      <div className="text-xs text-gray-500 line-through">
-                        {formatPrice(product.price)}
+                    {product.discountPercentage > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <div className="text-xs text-gray-500 line-through">
+                          {formatPrice(product.price)}
+                        </div>
+                        <div className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">
+                          {product.discountPercentage}% OFF
+                        </div>
                       </div>
                     )}
                   </div>

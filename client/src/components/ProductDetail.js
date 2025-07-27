@@ -247,19 +247,26 @@ const ProductDetail = () => {
 
             {/* Pricing */}
             <div className="border-t border-b border-gray-200 py-6">
-              <div className="flex items-center space-x-4 mb-4">
-                <span className="text-3xl font-bold text-gray-900">
-                  {formatPrice(product.finalPrice)}
-                </span>
-                {product.discountPrice && (
-                  <>
-                    <span className="text-xl text-gray-500 line-through">
-                      {formatPrice(product.price)}
-                    </span>
-                    <span className="bg-red-100 text-red-800 px-2 py-1 rounded text-sm font-semibold">
+              <div className="space-y-2 mb-4">
+                <div className="flex items-center space-x-4">
+                  <span className="text-3xl font-bold text-gray-900">
+                    {formatPrice(product.finalPrice)}
+                  </span>
+                  {product.discountPercentage > 0 && (
+                    <span className="bg-red-500 text-white px-3 py-1 rounded-full text-sm font-bold">
                       {product.discountPercentage}% OFF
                     </span>
-                  </>
+                  )}
+                </div>
+                {product.discountPercentage > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-lg text-gray-500 line-through">
+                      Original: {formatPrice(product.price)}
+                    </span>
+                    <span className="text-sm text-green-600 font-medium">
+                      You save: {formatPrice(product.discountAmount || 0)}
+                    </span>
+                  </div>
                 )}
               </div>
               
@@ -405,9 +412,23 @@ const ProductDetail = () => {
                         {relatedProduct.name}
                       </h3>
                     </Link>
-                    <p className="text-yellow-600 font-bold">
-                      {formatPrice(relatedProduct.finalPrice)}
-                    </p>
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <p className="text-yellow-600 font-bold">
+                          {formatPrice(relatedProduct.finalPrice)}
+                        </p>
+                        {relatedProduct.discountPercentage > 0 && (
+                          <span className="bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                            {relatedProduct.discountPercentage}% OFF
+                          </span>
+                        )}
+                      </div>
+                      {relatedProduct.discountPercentage > 0 && (
+                        <p className="text-xs text-gray-500 line-through">
+                          {formatPrice(relatedProduct.price)}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
