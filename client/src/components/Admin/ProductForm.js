@@ -19,7 +19,12 @@ const ProductForm = ({ product, onSave, onCancel }) => {
     isActive: true,
     isFeatured: false,
     seoTitle: '',
-    seoDescription: ''
+    seoDescription: '',
+    // Pricing fields
+    pricing: {
+      wastage: '',
+      makingCharges: ''
+    }
   });
 
   const [images, setImages] = useState({
@@ -92,7 +97,12 @@ const ProductForm = ({ product, onSave, onCancel }) => {
         isActive: product.isActive !== undefined ? product.isActive : true,
         isFeatured: product.isFeatured !== undefined ? product.isFeatured : false,
         seoTitle: product.seoTitle || '',
-        seoDescription: product.seoDescription || ''
+        seoDescription: product.seoDescription || '',
+        // Pricing fields
+        pricing: {
+          wastage: product.pricing?.wastage || '',
+          makingCharges: product.pricing?.makingCharges || ''
+        }
       });
 
       // Set existing image previews
@@ -397,6 +407,49 @@ const ProductForm = ({ product, onSave, onCancel }) => {
                   <option key={unit} value={unit}>{unit}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          {/* Pricing Configuration */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Wastage (%) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="pricing.wastage"
+                value={formData.pricing.wastage}
+                onChange={handleInputChange}
+                step="0.1"
+                min="0"
+                max="100"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                placeholder="e.g., 10 for 10%"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Wastage percentage during manufacturing (e.g., 10 for 10%)
+              </p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Making Charges (₹) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                name="pricing.makingCharges"
+                value={formData.pricing.makingCharges}
+                onChange={handleInputChange}
+                step="1"
+                min="0"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+                placeholder="e.g., 5000"
+                required
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Fixed making charges in rupees (craftsmanship cost)
+              </p>
             </div>
           </div>
 

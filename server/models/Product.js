@@ -60,14 +60,15 @@ const productSchema = new mongoose.Schema({
       type: Number,
       default: 0,
       min: 0,
-      description: 'Wastage in grams/carats'
+      max: 100,
+      description: 'Wastage percentage (e.g., 10 for 10%)'
     },
     makingCharges: {
       type: Number,
       required: true,
       min: 0,
       default: 0,
-      description: 'Making charges in INR'
+      description: 'Making charges in INR (fixed amount, not per gram)'
     },
     
     // Calculated prices (auto-updated when rates change)

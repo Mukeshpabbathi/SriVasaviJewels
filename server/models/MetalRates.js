@@ -174,8 +174,9 @@ metalRatesSchema.statics.calculateProductPrice = async function(productData) {
       throw new Error(`Unsupported metal: ${metal}`);
   }
   
-  // Calculate price: ((weight + wastage) * metalRate) + makingCharges
-  const totalWeight = weight + wastage;
+  // Calculate price: weight + (weight * wastage%) * metalRate + makingCharges
+  const wastageAmount = weight * (wastage / 100); // Convert percentage to actual weight
+  const totalWeight = weight + wastageAmount;
   const metalCost = totalWeight * metalRate;
   const totalPrice = metalCost + makingCharges;
   
@@ -185,7 +186,7 @@ metalRatesSchema.statics.calculateProductPrice = async function(productData) {
     metalCost: Math.round(metalCost * 100) / 100,
     makingCharges,
     totalPrice: Math.round(totalPrice * 100) / 100,
-    calculation: `((${weight}g + ${wastage}g) × ₹${metalRate}) + ₹${makingCharges} = ₹${Math.round(totalPrice * 100) / 100}`
+    calculation: `((${weight}g + ${weight}g × ${wastage}%) × ₹${metalRate}) + ₹${makingCharges} = ₹${Math.round(totalPrice * 100) / 100}`
   };
 };
 
