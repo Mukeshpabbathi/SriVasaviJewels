@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { getImageUrl } from '../../utils/api';
+import { getImageUrl as getApiImageUrl } from '../../utils/api';
 
 const ResponsiveImage = ({ 
   image, 
@@ -11,25 +11,25 @@ const ResponsiveImage = ({
   const [imageError, setImageError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Handle different image formats
-  const getImageUrl = (imageData, requestedSize = size) => {
+  // Handle different image formats - FIXED: No more infinite recursion
+  const processImageUrl = (imageData, requestedSize = size) => {
     if (!imageData) return fallbackSrc;
     
     // If it's a string (old format or simple URL)
     if (typeof imageData === 'string') {
-      return getImageUrl(imageData);
+      return getApiImageUrl(imageData); // Use the imported API function
     }
     
     // If it's new format with responsive images
     if (imageData.responsive && imageData.responsive[requestedSize]) {
       const url = imageData.responsive[requestedSize];
-      return getImageUrl(url);
+      return getApiImageUrl(url);
     }
     
     // Fallback to main URL
     if (imageData.url) {
       const url = imageData.url;
-      return getImageUrl(url);
+      return getApiImageUrl(url);
     }
     
     return fallbackSrc;
@@ -39,15 +39,15 @@ const ResponsiveImage = ({
     if (!imageData) return fallbackSrc;
     
     if (typeof imageData === 'string') {
-      return getImageUrl(imageData);
+      return getApiImageUrl(imageData);
     }
     
     if (imageData.fallbackUrl) {
       const url = imageData.fallbackUrl;
-      return getImageUrl(url);
+      return getApiImageUrl(url);
     }
     
-    return getImageUrl(imageData);
+    return processImageUrl(imageData);
   };
 
   const getSrcSet = (imageData) => {
@@ -76,7 +76,7 @@ const ResponsiveImage = ({
     setIsLoading(false);
   };
 
-  const primaryUrl = getImageUrl(image, size);
+  const primaryUrl = processImageUrl(image, size);
   const fallbackUrl = getFallbackUrl(image);
   const srcSet = getSrcSet(image);
   const sizes = getSizes(image);
@@ -117,7 +117,7 @@ const ResponsiveImage = ({
         <div className="absolute inset-0 bg-gray-100 flex items-center justify-center">
           <div className="text-center text-gray-500">
             <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 002 2z" />
             </svg>
             <p className="text-xs">Image not available</p>
           </div>
