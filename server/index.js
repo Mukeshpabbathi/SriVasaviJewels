@@ -11,12 +11,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-  origin: [
-    'http://localhost:3000',
-    'https://sri-vasavi-jewels.vercel.app',
-    'https://sri-vasavi-jewels-git-main-mukesh-pabbathis-projects.vercel.app',
-    process.env.CLIENT_URL
-  ].filter(Boolean),
+  origin: true,
   credentials: true
 }));
 app.use(express.json({ limit: '10mb' }));
