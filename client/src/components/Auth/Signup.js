@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import apiConfig from '../../config/api';
 
 const Signup = ({ onSignup }) => {
   const [formData, setFormData] = useState({
@@ -37,7 +36,7 @@ const Signup = ({ onSignup }) => {
       };
 
       const body = JSON.stringify({ name, email, password });
-      const res = await axios.post(apiConfig.endpoints.auth.signup, body, config);
+      const res = await axios.post('http://localhost:4000/api/auth/signup', body, config);
 
       // Handle new API response format
       if (res.data.success) {
