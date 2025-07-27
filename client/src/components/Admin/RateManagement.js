@@ -105,7 +105,7 @@ const RateManagement = () => {
   };
 
   const updateAllProductPrices = async () => {
-    if (!confirm('This will update prices for all products based on current rates. Continue?')) {
+    if (!window.confirm('This will update prices for all products based on current rates. Continue?')) {
       return;
     }
     
