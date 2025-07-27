@@ -1,6 +1,6 @@
 const express = require('express');
 const RateController = require('../controllers/rateController');
-const authMiddleware = require('../middleware/authMiddleware');
+const { protect } = require('../middleware/authMiddleware');
 const adminMiddleware = require('../middleware/adminMiddleware');
 
 const router = express.Router();
@@ -10,7 +10,7 @@ router.get('/current', RateController.getCurrentRates);
 router.post('/calculate', RateController.calculatePrice);
 
 // Admin only routes
-router.use(authMiddleware); // All routes below require authentication
+router.use(protect); // All routes below require authentication
 router.use(adminMiddleware); // All routes below require admin role
 
 router.post('/update', RateController.updateRates);
