@@ -30,7 +30,7 @@ const productSchema = new mongoose.Schema({
   purity: {
     type: String,
     enum: {
-      values: ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'],
+      values: ['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Diamond', 'Not Applicable'],
       message: 'Invalid purity value. Please select from available options.'
     },
     required: [true, 'Purity is required']
@@ -206,8 +206,20 @@ const productSchema = new mongoose.Schema({
   toJSON: { 
     virtuals: true,
     transform: function(doc, ret) {
-      // Calculate final price (with discount if applicable)
-      ret.finalPrice = ret.discountPrice || ret.price;
+      // Calculate final price using dynamic pricing logic
+      let finalPrice = ret.price; // fallback to original price
+      
+      // Use manual price if set
+      if (ret.pricing && ret.pricing.manualPrice > 0) {
+        finalPrice = ret.pricing.manualPrice;
+      }
+      // Otherwise use calculated price if available
+      else if (ret.pricing && ret.pricing.calculatedPrice > 0) {
+        finalPrice = ret.pricing.calculatedPrice;
+      }
+      
+      // Apply discount if available
+      ret.finalPrice = ret.discountPrice || finalPrice;
       
       // Calculate discount percentage
       if (ret.discountPrice && ret.price > ret.discountPrice) {

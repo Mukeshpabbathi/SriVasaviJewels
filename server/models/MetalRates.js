@@ -145,9 +145,11 @@ metalRatesSchema.statics.calculateProductPrice = async function(productData) {
     case 'silver':
       switch (purity) {
         case '999':
+        case '999 Silver':
           metalRate = currentRates.silver.rate999;
           break;
         case '925':
+        case '925 Silver':
           metalRate = currentRates.silver.rate925;
           break;
         default:
@@ -156,7 +158,7 @@ metalRatesSchema.statics.calculateProductPrice = async function(productData) {
       break;
       
     case 'platinum':
-      if (purity === '950') {
+      if (purity === '950' || purity === 'Platinum 950') {
         metalRate = currentRates.platinum.rate950;
       } else {
         throw new Error(`Unsupported platinum purity: ${purity}`);
@@ -164,6 +166,7 @@ metalRatesSchema.statics.calculateProductPrice = async function(productData) {
       break;
       
     case 'diamond':
+      // For diamonds, purity doesn't affect rate (diamonds are priced per carat regardless of setting metal)
       metalRate = currentRates.diamond.ratePerCarat;
       break;
       
