@@ -3,6 +3,9 @@
 // Get API base URL from environment variable or fallback to localhost
 export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
 
+// Log the API URL being used (for debugging)
+console.log('🔗 Sri Vasavi Jewels API URL:', API_BASE_URL);
+
 // API endpoints
 export const API_ENDPOINTS = {
   // Authentication
