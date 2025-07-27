@@ -10,7 +10,6 @@ const ProductForm = ({ product, onSave, onCancel }) => {
     metal: '',
     purity: '',
     weight: { value: '', unit: 'grams' },
-    price: '',
     discountPrice: '',
     stock: { quantity: 0 },
     dimensions: { length: '', width: '', height: '', unit: 'mm' },
@@ -88,7 +87,6 @@ const ProductForm = ({ product, onSave, onCancel }) => {
         metal: product.metal || '',
         purity: product.purity || '',
         weight: product.weight || { value: '', unit: 'grams' },
-        price: product.price || '',
         discountPrice: product.discountPrice || '',
         stock: product.stock || { quantity: 0 },
         dimensions: product.dimensions || { length: '', width: '', height: '', unit: 'mm' },
@@ -454,39 +452,40 @@ const ProductForm = ({ product, onSave, onCancel }) => {
           </div>
 
           {/* Pricing */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Price (₹) <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="number"
-                name="price"
-                value={formData.price}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                placeholder="Enter price"
-              />
-            </div>
+          {/* Calculated Price Display */}
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">💰 Dynamic Pricing</h3>
+            <p className="text-sm text-gray-600 mb-2">
+              Price will be calculated automatically based on:
+            </p>
+            <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
+              <li>Current metal rates</li>
+              <li>Product weight + wastage percentage</li>
+              <li>Making charges</li>
+            </ul>
+            <p className="text-xs text-yellow-700 mt-2">
+              💡 Save the product to see the calculated price
+            </p>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Discount Price (₹)
-              </label>
-              <input
-                type="number"
-                name="discountPrice"
-                value={formData.discountPrice}
-                onChange={handleInputChange}
-                min="0"
-                step="0.01"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
-                placeholder="Enter discount price"
-              />
-            </div>
+          {/* Optional Discount */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Discount Price (₹) <span className="text-gray-400">(Optional)</span>
+            </label>
+            <input
+              type="number"
+              name="discountPrice"
+              value={formData.discountPrice}
+              onChange={handleInputChange}
+              min="0"
+              step="0.01"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-transparent"
+              placeholder="Enter discount price (optional)"
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              If set, this will override the calculated price for display
+            </p>
           </div>
 
           {/* Images */}

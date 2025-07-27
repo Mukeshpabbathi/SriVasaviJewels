@@ -258,16 +258,17 @@ const createProduct = async (req, res) => {
       isActive,
       isFeatured,
       seoTitle,
-      seoDescription
+      seoDescription,
+      pricing
     } = req.body;
 
     // Validate required fields
-    if (!name || !description || !category || !metal || !price || !purity) {
+    if (!name || !description || !category || !metal || !purity) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields',
         errors: [
-          { field: 'required', message: 'Name, description, category, metal, purity, and price are required' }
+          { field: 'required', message: 'Name, description, category, metal, and purity are required' }
         ]
       });
     }
@@ -313,6 +314,14 @@ const createProduct = async (req, res) => {
       parsedTags = safeJSONParse(tags, []);
     }
     
+    // Parse pricing data
+    let parsedPricing = { wastage: 0, makingCharges: 0 };
+    if (pricing) {
+      parsedPricing = safeJSONParse(pricing, { wastage: 0, makingCharges: 0 });
+      parsedPricing.wastage = parseFloat(parsedPricing.wastage) || 0;
+      parsedPricing.makingCharges = parseFloat(parsedPricing.makingCharges) || 0;
+    }
+
     // Create product
     const productData = {
       name,
@@ -322,7 +331,7 @@ const createProduct = async (req, res) => {
       metal,
       purity,
       weight: parsedWeight,
-      price: parseFloat(price),
+      price: 0, // Will be calculated dynamically
       discountPrice: discountPrice ? parseFloat(discountPrice) : undefined,
       images,
       stock: parsedStock,
@@ -333,7 +342,8 @@ const createProduct = async (req, res) => {
       isFeatured: isFeatured === 'true' || isFeatured === true,
       seoTitle: seoTitle || '',
       seoDescription: seoDescription || '',
-      createdBy: req.user._id
+      createdBy: req.user._id,
+      pricing: parsedPricing
     };
 
     console.log('Creating product with processed data:', {
@@ -344,6 +354,16 @@ const createProduct = async (req, res) => {
     });
     
     const product = await Product.create(productData);
+    
+    // Calculate price based on current metal rates
+    try {
+      await product.updatePriceFromRates();
+      await product.save();
+      console.log(`Price calculated for new product: ${product.name} = ₹${product.finalPrice}`);
+    } catch (priceError) {
+      console.error('Price calculation error for new product:', priceError.message);
+      // Continue even if price calculation fails
+    }
     
     await product.populate('createdBy', 'name email');
     
@@ -423,7 +443,8 @@ const updateProduct = async (req, res) => {
       isFeatured,
       seoTitle,
       seoDescription,
-      removeImages
+      removeImages,
+      pricing
     } = req.body;
     
     // Handle image removal
@@ -476,7 +497,7 @@ const updateProduct = async (req, res) => {
     if (weight) {
       product.weight = safeJSONParse(weight, { value: 0, unit: 'grams' });
     }
-    if (price) product.price = parseFloat(price);
+    // Price is calculated dynamically, not set manually
     if (discountPrice !== undefined) {
       product.discountPrice = discountPrice ? parseFloat(discountPrice) : undefined;
     }
@@ -496,6 +517,28 @@ const updateProduct = async (req, res) => {
     if (isFeatured !== undefined) product.isFeatured = isFeatured === 'true' || isFeatured === true;
     if (seoTitle !== undefined) product.seoTitle = seoTitle;
     if (seoDescription !== undefined) product.seoDescription = seoDescription;
+    
+    // Update pricing fields
+    if (pricing) {
+      const pricingData = safeJSONParse(pricing, {});
+      if (pricingData.wastage !== undefined) {
+        product.pricing.wastage = parseFloat(pricingData.wastage);
+      }
+      if (pricingData.makingCharges !== undefined) {
+        product.pricing.makingCharges = parseFloat(pricingData.makingCharges);
+      }
+    }
+    
+    // Recalculate price if pricing fields or weight/metal/purity changed
+    if (pricing || weight || metal || purity) {
+      try {
+        await product.updatePriceFromRates();
+        console.log(`Price recalculated for product: ${product.name}`);
+      } catch (priceError) {
+        console.error('Price recalculation error:', priceError.message);
+        // Continue with save even if price calculation fails
+      }
+    }
     
     product.updatedBy = req.user._id;
     

@@ -49,8 +49,9 @@ const productSchema = new mongoose.Schema({
   },
   price: {
     type: Number,
-    required: [true, 'Price is required'],
-    min: [0, 'Price cannot be negative']
+    default: 0,
+    min: [0, 'Price cannot be negative'],
+    description: 'Calculated price (auto-updated from metal rates)'
   },
   
   // Dynamic pricing fields

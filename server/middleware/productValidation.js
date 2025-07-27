@@ -29,20 +29,10 @@ const validateCreateProduct = [
     .isIn(['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'])
     .withMessage('Invalid purity value. Please select from available options.'),
     
-  body('price')
-    .isFloat({ min: 0 })
-    .withMessage('Price must be a positive number'),
-    
   body('discountPrice')
     .optional()
     .isFloat({ min: 0 })
-    .withMessage('Discount price must be a positive number')
-    .custom((value, { req }) => {
-      if (value && parseFloat(value) >= parseFloat(req.body.price)) {
-        throw new Error('Discount price must be less than original price');
-      }
-      return true;
-    }),
+    .withMessage('Discount price must be a positive number'),
     
   body('weight')
     .optional()
@@ -210,19 +200,10 @@ const validateUpdateProduct = [
     .isIn(['14K', '18K', '22K', '24K', '925 Silver', 'Platinum 950', 'Not Applicable'])
     .withMessage('Invalid purity value. Please select from available options.'),
     
-  body('price')
-    .optional()
-    .isFloat({ min: 0 })
-    .withMessage('Price must be a positive number'),
-    
   body('discountPrice')
     .optional()
-    .custom((value, { req }) => {
-      if (value && req.body.price && parseFloat(value) >= parseFloat(req.body.price)) {
-        throw new Error('Discount price must be less than original price');
-      }
-      return true;
-    }),
+    .isFloat({ min: 0 })
+    .withMessage('Discount price must be a positive number'),
     
   body('weight')
     .optional()
